@@ -1,0 +1,84 @@
+﻿@model itehad.Models.ViewModels.LoginViewModel
+@using itehad.Helpers
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - تكسي الاتحاد</title>
+    <link rel="icon" type="image/svg+xml" href="@Icons.TaxiLogoFaviconDataUri()" />
+    @Styles.Render("~/Content/css")
+    <style>
+        body.login-body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background:
+                radial-gradient(600px 320px at 20% 10%, rgba(255, 209, 102, .12), transparent 60%),
+                linear-gradient(180deg, #10192e 0%, #16223d 100%);
+        }
+        .login-card {
+            width: 100%;
+            max-width: 380px;
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            padding: 2.25rem 2rem;
+        }
+        .login-brand {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .login-brand .brand-logo {
+            width: 64px;
+            height: 64px;
+            margin-bottom: .75rem;
+        }
+        .login-brand h1 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin: 0;
+        }
+        .login-brand p {
+            color: var(--text-muted);
+            font-size: .85rem;
+            margin: .2rem 0 0;
+        }
+    </style>
+</head>
+<body class="login-body">
+    <div class="login-card">
+        <div class="login-brand">
+            @Icons.TaxiLogo()
+            <h1>تكسي الاتحاد</h1>
+            <p>سجّل الدخول لمتابعة العمل</p>
+        </div>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger">@Html.ValidationSummary(true, "", new { @class = "mb-0" })</div>
+        }
+
+        @using (Html.BeginForm("Login", "Account", new { returnUrl = ViewBag.ReturnUrl as string }, FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            <div class="mb-3">
+                <label class="form-label">اسم المستخدم</label>
+                @Html.TextBoxFor(m => m.Username, new { @class = "form-control", autofocus = "autofocus" })
+            </div>
+            <div class="mb-3">
+                <label class="form-label">كلمة المرور</label>
+                @Html.PasswordFor(m => m.Password, new { @class = "form-control" })
+            </div>
+            <button type="submit" class="btn btn-accent w-100 mt-2">دخول</button>
+        }
+    </div>
+
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+</body>
+</html>

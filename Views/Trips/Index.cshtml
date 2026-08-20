@@ -1,0 +1,132 @@
+﻿@model itehad.Models.ViewModels.TripListViewModel
+@using itehad.Helpers
+@using itehad.Models
+@{
+    ViewBag.Title = "سجل الحركة اليومية";
+    var prevDate = Model.FilterDate.AddDays(-1).ToString("yyyy-MM-dd");
+    var nextDate = Model.FilterDate.AddDays(1).ToString("yyyy-MM-dd");
+    var todayDate = DateTime.Today.ToString("yyyy-MM-dd");
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", new { date = prevDate })">&raquo;</a>
+        <form method="get" action="@Url.Action("Index")" class="d-flex align-items-center gap-2">
+            <input type="date" name="date" class="form-control form-control-sm" value="@Model.FilterDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+        </form>
+        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", new { date = nextDate })">&laquo;</a>
+        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", new { date = todayDate })">اليوم</a>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="@Url.Action("Print", new { date = Model.FilterDate.ToString("yyyy-MM-dd") })" target="_blank" class="btn btn-outline-secondary">طباعة / PDF</a>
+        <a href="@Url.Action("ExportTrips", "Excel", new { date = Model.FilterDate.ToString("yyyy-MM-dd") })" class="btn btn-outline-secondary">تصدير Excel</a>
+        <a href="@Url.Action("Create")" class="btn btn-accent">@Icons.PlusCircle() تسجيل رحلة جديدة</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon green">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.CashILS.ToString("N0"))</div>
+                <div class="stat-label">نقدي (شيقل)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon green">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("$" + Model.CashUSD.ToString("N0"))</div>
+                <div class="stat-label">نقدي (دولار)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.CreditTotalILS.ToString("N0"))</div>
+                <div class="stat-label">إجمالي الذمم (شيقل)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("$" + Model.CreditTotalUSD.ToString("N0"))</div>
+                <div class="stat-label">إجمالي الذمم (دولار)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="table-card">
+    @if (Model.Trips.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>الرقم</th>
+                        <th>الوقت</th>
+                        <th>المصدر</th>
+                        <th>الزبون</th>
+                        <th>من - إلى</th>
+                        <th>السائقون</th>
+                        <th>الأجرة</th>
+                        <th>الدفع</th>
+                        <th>ملاحظات</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Trips)
+                    {
+                        <tr>
+                            <td class="fw-bold text-muted">@t.Id</td>
+                            <td>@t.TripDate.ToString("HH:mm")</td>
+                            <td>@t.BookingSource.Name</td>
+                            <td class="fw-semibold">@t.Customer.Name</td>
+                            <td>@t.FromLocation.Name <span class="route-arrow">←</span> @t.ToLocation.Name</td>
+                            <td>@string.Join("، ", t.TripDrivers.Select(td => td.Driver.Name))</td>
+                            <td>@(t.Currency == CurrencyType.ILS ? "₪" : "$")@t.Fare.ToString("N0")</td>
+                            <td>
+                                @if (t.PaymentMethod == PaymentMethodType.Cash)
+                                {
+                                    <span class="pill pill-green">نقدي</span>
+                                }
+                                else
+                                {
+                                    <span class="pill pill-red">ذمم</span>
+                                }
+                            </td>
+                            <td class="text-muted small">@t.Notes</td>
+                            <td class="text-start">
+                                <div class="d-flex gap-1 justify-content-start">
+                                    <a href="@Url.Action("Edit", new { id = t.Id })" class="btn btn-sm btn-outline-secondary" title="تعديل">@Icons.Edit()</a>
+                                    @using (Html.BeginForm("DeleteTrip", "Audit", FormMethod.Post, new { style = "display:inline", onsubmit = "return confirm('هل أنت متأكد من حذف هذه الرحلة؟ لا يمكن التراجع عن الحذف.');" }))
+                                    {
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@t.Id" />
+                                        <input type="hidden" name="date" value="@Model.FilterDate.ToString("yyyy-MM-dd")" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف">@Icons.XCircle()</button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.List()
+            <div>لا توجد رحلات مسجّلة في هذا التاريخ</div>
+        </div>
+    }
+</div>

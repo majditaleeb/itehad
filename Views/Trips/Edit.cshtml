@@ -1,0 +1,11 @@
+﻿@model itehad.Models.ViewModels.TripFormViewModel
+@{
+    ViewBag.Title = "تعديل رحلة";
+}
+
+<div class="table-card p-4">
+    @using (Html.BeginForm("Edit", "Trips", FormMethod.Post))
+    {
+        @Html.Partial("_Form")
+    }
+</div>

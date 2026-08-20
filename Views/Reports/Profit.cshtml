@@ -1,0 +1,147 @@
+﻿@model itehad.Models.ViewModels.ProfitReportViewModel
+@using itehad.Helpers
+@{
+    ViewBag.Title = "تقرير الأرباح حسب مصدر الحجز";
+    var maxIls = Model.Rows.Any() ? Model.Rows.Max(r => r.TotalILS) : 0;
+    var maxUsd = Model.Rows.Any() ? Model.Rows.Max(r => r.TotalUSD) : 0;
+}
+
+<form method="get" action="@Url.Action("Profit")" class="d-flex flex-wrap align-items-end gap-2 mb-4">
+    <div>
+        <label class="form-label">من تاريخ</label>
+        <input type="date" name="from" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div>
+        <label class="form-label">إلى تاريخ</label>
+        <input type="date" name="to" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <button type="submit" class="btn btn-accent">عرض التقرير</button>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon green">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.TotalRevenueILS.ToString("N0"))</div>
+                <div class="stat-label">إجمالي الإيرادات (شيقل)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.TotalExpenses.ToString("N0"))</div>
+                <div class="stat-label">إجمالي المصاريف</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon @(Model.NetProfitILS >= 0 ? "blue" : "red")">@Icons.BarChart()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.NetProfitILS.ToString("N0"))</div>
+                <div class="stat-label">صافي الربح (الإيرادات ناقص المصاريف)</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.ExpensesByCategory.Any())
+{
+    <div class="chart-card mb-4">
+        <div class="chart-title">@Icons.Tag() المصاريف حسب التصنيف</div>
+        <div class="bar-chart">
+            @{ var maxExpense = Model.ExpensesByCategory.Max(r => r.TotalAmount); }
+            @foreach (var row in Model.ExpensesByCategory)
+            {
+                var pct = maxExpense > 0 ? (double)(row.TotalAmount / maxExpense) * 100 : 0;
+                <div class="bar-row">
+                    <div class="bar-label" title="@row.CategoryName">@row.CategoryName</div>
+                    <div class="bar-track" title="@(row.CategoryName): ₪@row.TotalAmount.ToString("N0")">
+                        <div class="bar-fill usd" style="width:@(pct.ToString("0.##"))%"></div>
+                    </div>
+                    <div class="bar-value">@("₪" + row.TotalAmount.ToString("N0"))</div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (!Model.Rows.Any())
+{
+    <div class="table-card">
+        <div class="empty-state">
+            @Icons.BarChart()
+            <div>لا توجد رحلات ضمن هذه الفترة</div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-3 mb-4">
+        <div class="col-lg-6">
+            <div class="chart-card h-100">
+                <div class="chart-title">@Icons.Money() إجمالي الإيرادات بالشيقل (₪)</div>
+                <div class="bar-chart">
+                    @foreach (var row in Model.Rows)
+                    {
+                        var pct = maxIls > 0 ? (double)(row.TotalILS / maxIls) * 100 : 0;
+                        <div class="bar-row">
+                            <div class="bar-label" title="@row.BookingSourceName">@row.BookingSourceName</div>
+                            <div class="bar-track" title="@(row.BookingSourceName): ₪@row.TotalILS.ToString("N0")">
+                                <div class="bar-fill ils" style="width:@(pct.ToString("0.##"))%"></div>
+                            </div>
+                            <div class="bar-value">@("₪" + row.TotalILS.ToString("N0"))</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="chart-card h-100">
+                <div class="chart-title">@Icons.Money() إجمالي الإيرادات بالدولار ($)</div>
+                <div class="bar-chart">
+                    @foreach (var row in Model.Rows)
+                    {
+                        var pct = maxUsd > 0 ? (double)(row.TotalUSD / maxUsd) * 100 : 0;
+                        <div class="bar-row">
+                            <div class="bar-label" title="@row.BookingSourceName">@row.BookingSourceName</div>
+                            <div class="bar-track" title="@(row.BookingSourceName): $@row.TotalUSD.ToString("N0")">
+                                <div class="bar-fill usd" style="width:@(pct.ToString("0.##"))%"></div>
+                            </div>
+                            <div class="bar-value">@("$" + row.TotalUSD.ToString("N0"))</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>مصدر الحجز</th>
+                        <th>عدد الرحلات</th>
+                        <th>إجمالي الشيقل</th>
+                        <th>إجمالي الدولار</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@row.BookingSourceName</td>
+                            <td>@row.TripCount</td>
+                            <td>@("₪" + row.TotalILS.ToString("N0"))</td>
+                            <td>@("$" + row.TotalUSD.ToString("N0"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

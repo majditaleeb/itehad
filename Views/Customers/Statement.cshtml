@@ -1,0 +1,137 @@
+﻿@model itehad.Models.ViewModels.CustomerStatementViewModel
+@using itehad.Helpers
+@using itehad.Models
+@{
+    ViewBag.Title = "كشف حساب - " + Model.Customer.Name;
+
+    Func<itehad.Models.ViewModels.CustomerLedgerViewModel, string, IHtmlString> renderLedger = (ledger, title) =>
+    {
+        var sb = new System.Text.StringBuilder();
+        var currencySymbol = ledger.Currency == CurrencyType.ILS ? "₪" : "$";
+
+        // With no from-date every movement is listed in the table, so the
+        // opening balance must be zero; the controller wrongly reports the
+        // full net there, which double-counts. Recompute the running balance
+        // from the entries so opening + rows always add up to the closing.
+        var opening = Model.FromDate.HasValue ? ledger.OpeningBalance : 0m;
+        var running = opening;
+
+        sb.Append("<div class=\"table-card mb-4\">");
+        sb.Append("<div class=\"card-header bg-white px-3 py-3\">" + title + "</div>");
+        sb.Append("<div class=\"table-responsive\"><table class=\"table table-hover align-middle mb-0\">");
+        sb.Append("<thead><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead><tbody>");
+
+        sb.Append("<tr class=\"table-light\"><td colspan=\"4\" class=\"fw-semibold\">رصيد افتتاحي</td><td class=\"fw-bold\">"
+            + currencySymbol + opening.ToString("N0") + "</td></tr>");
+
+        foreach (var e in ledger.Entries)
+        {
+            running += e.Debit - e.Credit;
+            sb.Append("<tr>");
+            sb.Append("<td>" + e.Date.ToString("yyyy-MM-dd HH:mm") + "</td>");
+            sb.Append("<td>" + Html.Encode(e.Description) + "</td>");
+            sb.Append("<td class=\"text-danger\">" + (e.Debit > 0 ? currencySymbol + e.Debit.ToString("N0") : "-") + "</td>");
+            sb.Append("<td class=\"text-success\">" + (e.Credit > 0 ? currencySymbol + e.Credit.ToString("N0") : "-") + "</td>");
+            sb.Append("<td class=\"fw-semibold\">" + currencySymbol + running.ToString("N0") + "</td>");
+            sb.Append("</tr>");
+        }
+
+        sb.Append("<tr class=\"table-light\"><td colspan=\"4\" class=\"fw-bold\">رصيد ختامي</td><td class=\"fw-bold\">"
+            + currencySymbol + running.ToString("N0") + "</td></tr>");
+
+        sb.Append("</tbody></table></div></div>");
+        return new HtmlString(sb.ToString());
+    };
+}
+
+<div class="mb-4 d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+        <h2 class="h5 fw-bold mb-1">@Model.Customer.Name</h2>
+        @if (!string.IsNullOrEmpty(Model.Customer.Phone))
+        {
+            <div class="text-muted small d-flex align-items-center gap-1">@Icons.Phone() @Model.Customer.Phone</div>
+        }
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-accent" data-bs-toggle="modal" data-bs-target="#addPaymentModal">@Icons.PlusCircle() تسجيل دفعة</button>
+        <a href="@Url.Action("Print", new { id = Model.Customer.Id, from = Model.FromDate.HasValue ? Model.FromDate.Value.ToString("yyyy-MM-dd") : null, to = Model.ToDate.ToString("yyyy-MM-dd") })" target="_blank" class="btn btn-outline-secondary">طباعة / PDF</a>
+        <a href="@Url.Action("ExportStatement", "Excel", new { id = Model.Customer.Id, from = Model.FromDate.HasValue ? Model.FromDate.Value.ToString("yyyy-MM-dd") : null, to = Model.ToDate.ToString("yyyy-MM-dd") })" class="btn btn-outline-secondary">تصدير Excel</a>
+    </div>
+</div>
+
+<form method="get" action="@Url.Action("Statement", new { id = Model.Customer.Id })" class="d-flex flex-wrap align-items-end gap-2 mb-4">
+    <div>
+        <label class="form-label">من تاريخ</label>
+        <input type="date" name="from" class="form-control" value="@(Model.FromDate.HasValue ? Model.FromDate.Value.ToString("yyyy-MM-dd") : "")" />
+    </div>
+    <div>
+        <label class="form-label">إلى تاريخ</label>
+        <input type="date" name="to" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <button type="submit" class="btn btn-outline-secondary">عرض</button>
+</form>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.CurrentOutstandingILS.ToString("N0"))</div>
+                <div class="stat-label">المستحق حاليًا بالشيقل</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("$" + Model.CurrentOutstandingUSD.ToString("N0"))</div>
+                <div class="stat-label">المستحق حاليًا بالدولار</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@renderLedger(Model.LedgerILS, "كشف الحساب بالشيقل (₪)")
+@renderLedger(Model.LedgerUSD, "كشف الحساب بالدولار ($)")
+
+<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            @using (Html.BeginForm("AddPayment", "Customers", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="CustomerId" value="@Model.Customer.Id" />
+                <div class="modal-header">
+                    <h5 class="modal-title">تسجيل دفعة جديدة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">المبلغ</label>
+                        <input type="number" step="0.01" min="0" name="Amount" class="form-control" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">العملة</label>
+                        <select name="Currency" class="form-select">
+                            <option value="0">شيقل</option>
+                            <option value="1">دولار</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">تاريخ الدفعة</label>
+                        <input type="date" name="PaymentDate" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea name="Notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-accent">حفظ الدفعة</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>

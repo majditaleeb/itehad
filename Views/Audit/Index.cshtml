@@ -1,0 +1,150 @@
+﻿@using System.Data
+@model System.Data.DataTable
+@{
+    ViewBag.Title = "سجل التعديلات والحذف";
+}
+
+@functions {
+    string S(DataRow r, string col)
+    {
+        return r.IsNull(col) ? null : Convert.ToString(r[col]);
+    }
+
+    string Money(DataRow r, string col)
+    {
+        return r.IsNull(col) ? null : Convert.ToDecimal(r[col]).ToString("N0");
+    }
+
+    string Dt(DataRow r, string col)
+    {
+        return r.IsNull(col) ? null : Convert.ToDateTime(r[col]).ToString("yyyy-MM-dd HH:mm");
+    }
+
+    string Currency(DataRow r, string col)
+    {
+        if (r.IsNull(col)) return null;
+        return Convert.ToInt32(r[col]) == 1 ? "دولار" : "شيقل";
+    }
+
+    string Payment(DataRow r, string col)
+    {
+        if (r.IsNull(col)) return null;
+        return Convert.ToInt32(r[col]) == 1 ? "ذمم" : "نقدي";
+    }
+
+    string ReqType(DataRow r, string col)
+    {
+        if (r.IsNull(col)) return null;
+        return Convert.ToInt32(r[col]) == 1 ? "عدة أيام" : "توصيلة";
+    }
+
+    string Settled(DataRow r, string col)
+    {
+        if (r.IsNull(col)) return null;
+        return Convert.ToBoolean(r[col]) ? "مسددة" : "غير مسددة";
+    }
+}
+
+@helper Change(string label, string oldVal, string newVal)
+{
+    var o = oldVal ?? "—";
+    var n = newVal ?? "—";
+    if (o != n)
+    {
+        <div class="mb-1">
+            <span class="fw-semibold">@label:</span>
+            <span class="text-danger text-decoration-line-through">@o</span>
+            <span class="route-arrow">←</span>
+            <span class="text-success fw-semibold">@n</span>
+        </div>
+    }
+}
+
+@helper Field(string label, string val)
+{
+    if (!string.IsNullOrEmpty(val))
+    {
+        <div class="mb-1"><span class="fw-semibold">@label:</span> <span>@val</span></div>
+    }
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <p class="text-muted mb-0 small">سجل بكل تعديل أو حذف يتم على الرحلات، مع القيمة القديمة والجديدة.</p>
+    <a href="@Url.Action("Index", "Trips")" class="btn btn-outline-secondary btn-sm">رجوع لسجل الحركة</a>
+</div>
+
+<div class="table-card">
+    @if (Model != null && Model.Rows.Count > 0)
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>التاريخ والوقت</th>
+                        <th>الإجراء</th>
+                        <th>رقم الرحلة</th>
+                        <th>المستخدم</th>
+                        <th>التفاصيل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (DataRow r in Model.Rows)
+                    {
+                        var action = S(r, "Action");
+                        var user = S(r, "AppUser");
+                        if (string.IsNullOrEmpty(user)) { user = S(r, "DbLogin"); }
+                        <tr>
+                            <td class="text-nowrap">@Dt(r, "ChangedAt")</td>
+                            <td>
+                                @if (action == "D")
+                                {
+                                    <span class="pill pill-red">حذف</span>
+                                }
+                                else
+                                {
+                                    <span class="pill pill-green">تعديل</span>
+                                }
+                            </td>
+                            <td class="fw-bold">@S(r, "TripId")</td>
+                            <td class="small">@user</td>
+                            <td class="small">
+                                @if (action == "D")
+                                {
+                                    @Field("التاريخ", Dt(r, "OldTripDate"))
+                                    @Field("المصدر", S(r, "OldSource"))
+                                    @Field("الزبون", S(r, "OldCustomer"))
+                                    @Field("من - إلى", (S(r, "OldFromLoc") ?? "") + " ← " + (S(r, "OldToLoc") ?? ""))
+                                    @Field("الأجرة", Money(r, "OldFare") + " " + Currency(r, "OldCurrency"))
+                                    @Field("الدفع", Payment(r, "OldPayment"))
+                                    @Field("السائقون", S(r, "DriversSnapshot"))
+                                    @Field("ملاحظات", S(r, "OldNotes"))
+                                }
+                                else
+                                {
+                                    @Change("التاريخ", Dt(r, "OldTripDate"), Dt(r, "NewTripDate"))
+                                    @Change("المصدر", S(r, "OldSource"), S(r, "NewSource"))
+                                    @Change("الزبون", S(r, "OldCustomer"), S(r, "NewCustomer"))
+                                    @Change("من", S(r, "OldFromLoc"), S(r, "NewFromLoc"))
+                                    @Change("إلى", S(r, "OldToLoc"), S(r, "NewToLoc"))
+                                    @Change("الأجرة", Money(r, "OldFare"), Money(r, "NewFare"))
+                                    @Change("العملة", Currency(r, "OldCurrency"), Currency(r, "NewCurrency"))
+                                    @Change("الدفع", Payment(r, "OldPayment"), Payment(r, "NewPayment"))
+                                    @Change("نوع الطلب", ReqType(r, "OldRequestType"), ReqType(r, "NewRequestType"))
+                                    @Change("عدد الأيام", S(r, "OldDaysCount"), S(r, "NewDaysCount"))
+                                    @Change("التسوية", Settled(r, "OldIsSettled"), Settled(r, "NewIsSettled"))
+                                    @Change("ملاحظات", S(r, "OldNotes"), S(r, "NewNotes"))
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <div>لا توجد تعديلات أو عمليات حذف مسجّلة بعد</div>
+        </div>
+    }
+</div>

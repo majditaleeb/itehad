@@ -1,0 +1,99 @@
+﻿@model itehad.Models.ViewModels.HoursReportViewModel
+@using itehad.Helpers
+@{
+    ViewBag.Title = "تقرير ساعات العمل";
+}
+
+<form method="get" action="@Url.Action("Hours")" class="d-flex flex-wrap align-items-end gap-2 mb-4">
+    <div>
+        <label class="form-label">من تاريخ</label>
+        <input type="date" name="from" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <div>
+        <label class="form-label">إلى تاريخ</label>
+        <input type="date" name="to" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+    </div>
+    <button type="submit" class="btn btn-accent">عرض التقرير</button>
+</form>
+
+<div class="table-card mb-4">
+    <div class="card-header bg-white px-3 py-3">ساعات العمل</div>
+    @if (Model.Rows.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>السائق</th>
+                        <th>إجمالي ساعات العمل</th>
+                        <th>الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Rows)
+                    {
+                        var totalMinutes = (int)Math.Round(row.TotalHours * 60);
+                        var hours = totalMinutes / 60;
+                        var minutes = totalMinutes % 60;
+                        <tr>
+                            <td class="fw-semibold">@row.DriverName</td>
+                            <td>@hours ساعة @minutes دقيقة</td>
+                            <td>
+                                @if (row.IsCurrentlyOnDuty)
+                                {
+                                    <span class="pill pill-green">@Icons.Clock() يعمل الآن</span>
+                                }
+                                else
+                                {
+                                    <span class="pill pill-gray">-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.BarChart()
+            <div>لا توجد بيانات حضور ضمن هذه الفترة</div>
+        </div>
+    }
+</div>
+
+<div class="table-card">
+    <div class="card-header bg-white px-3 py-3">تقرير الغياب</div>
+    @if (Model.Absences.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>السائق</th>
+                        <th>عدد أيام الغياب</th>
+                        <th>تواريخ الغياب</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Absences)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@row.DriverName</td>
+                            <td><span class="pill pill-red">@row.AbsentDates.Count</span></td>
+                            <td class="small text-muted">@string.Join("، ", row.AbsentDates.Select(d => d.ToString("yyyy-MM-dd")))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.CheckCircle()
+            <div>لا يوجد غياب لأي سائق ضمن هذه الفترة 🎉</div>
+        </div>
+    }
+</div>

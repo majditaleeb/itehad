@@ -1,0 +1,186 @@
+﻿@using itehad.Helpers
+@{
+    var currentController = (string)ViewContext.RouteData.Values["controller"];
+    var currentAction = (string)ViewContext.RouteData.Values["action"];
+    Func<string, string, bool> isActive = (controller, action) =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase)
+        && (action == null || string.Equals(currentAction, action, StringComparison.OrdinalIgnoreCase));
+    Func<string, bool> controllerActive = (controller) =>
+        string.Equals(currentController, controller, StringComparison.OrdinalIgnoreCase);
+    bool settingsOpen = controllerActive("Locations") || controllerActive("BookingSources") || controllerActive("AppSettings") || controllerActive("Users") || controllerActive("ExpenseCategories");
+}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - تكسي الاتحاد</title>
+    <link rel="icon" type="image/svg+xml" href="@Icons.TaxiLogoFaviconDataUri()" />
+    @Styles.Render("~/Content/css")
+</head>
+<body>
+    <div class="app-shell">
+        <div class="sidebar-backdrop" data-sidebar-toggle></div>
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                @Icons.TaxiLogo()
+                <div>
+                    <div class="title">تكسي الاتحاد</div>
+                    <div class="subtitle">نظام إدارة الحركة اليومية</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-link @(isActive("Home", "Index") ? "active" : "")" href="@Url.Action("Index", "Home")">
+                    @Icons.Dashboard() لوحة التحكم
+                </a>
+
+                @if (User.IsInRole(Modules.Trips))
+                {
+                    <a class="nav-link @(isActive("Trips", "Create") ? "active" : "")" href="@Url.Action("Create", "Trips")">
+                        @Icons.PlusCircle() تسجيل رحلة جديدة
+                    </a>
+                    <a class="nav-link @(isActive("Trips", "Index") ? "active" : "")" href="@Url.Action("Index", "Trips")">
+                        @Icons.List() سجل الحركة اليومية
+                    </a>
+                }
+
+                @if (User.IsInRole(Modules.Customers) || User.IsInRole(Modules.Drivers) || User.IsInRole(Modules.Attendance) || User.IsInRole(Modules.HoursReport))
+                {
+                    <div class="sidebar-section-label">الحسابات والطاقم</div>
+                }
+                @if (User.IsInRole(Modules.Customers))
+                {
+                    <a class="nav-link @(controllerActive("Customers") ? "active" : "")" href="@Url.Action("Index", "Customers")">
+                        @Icons.Users() الزبائن
+                    </a>
+                }
+                @if (User.IsInRole(Modules.Drivers))
+                {
+                    <a class="nav-link @(controllerActive("Drivers") ? "active" : "")" href="@Url.Action("Index", "Drivers")">
+                        @Icons.IdCard() السائقون
+                    </a>
+                }
+                @if (User.IsInRole(Modules.Attendance))
+                {
+                    <a class="nav-link @(isActive("Attendance", "Index") ? "active" : "")" href="@Url.Action("Index", "Attendance")">
+                        @Icons.Clock() حضور السائقين
+                    </a>
+                }
+                @if (User.IsInRole(Modules.Expenses))
+                {
+                    <a class="nav-link @(controllerActive("Expenses") ? "active" : "")" href="@Url.Action("Index", "Expenses")">
+                        @Icons.Money() المصاريف
+                    </a>
+                }
+                @if (User.IsInRole(Modules.HoursReport))
+                {
+                    <a class="nav-link @(isActive("Reports", "Hours") ? "active" : "")" href="@Url.Action("Hours", "Reports")">
+                        @Icons.BarChart() تقرير الساعات
+                    </a>
+                }
+                @if (User.IsInRole(Modules.ProfitReport))
+                {
+                    <a class="nav-link @(isActive("Reports", "Profit") ? "active" : "")" href="@Url.Action("Profit", "Reports")">
+                        @Icons.BarChart() تقرير الأرباح
+                    </a>
+                }
+
+                @if (User.IsInRole(Modules.Admin))
+                {
+                    <a class="nav-link @(isActive("Audit", "Index") ? "active" : "")" href="@Url.Action("Index", "Audit")">
+                        @Icons.List() سجل التعديلات والحذف
+                    </a>
+                }
+
+                @if (User.IsInRole(Modules.Settings) || User.IsInRole(Modules.Admin))
+                {
+                    <div class="sidebar-section-label">الإعدادات والإدارة</div>
+                    <a class="nav-link" data-bs-toggle="collapse" href="#settingsSubnav" role="button"
+                       aria-expanded="@(settingsOpen ? "true" : "false")" aria-controls="settingsSubnav">
+                        @Icons.Tag() القوائم والإعدادات
+                    </a>
+                    <div class="collapse sidebar-subnav @(settingsOpen ? "show" : "")" id="settingsSubnav">
+                        @if (User.IsInRole(Modules.Settings))
+                        {
+                            <a class="nav-link @(isActive("BookingSources", null) ? "active" : "")" href="@Url.Action("Index", "BookingSources")">
+                                @Icons.Tag() مصادر الحجز
+                            </a>
+                            <a class="nav-link @(isActive("Locations", null) ? "active" : "")" href="@Url.Action("Index", "Locations")">
+                                @Icons.MapPin() المواقع
+                            </a>
+                            <a class="nav-link @(isActive("ExpenseCategories", null) ? "active" : "")" href="@Url.Action("Index", "ExpenseCategories")">
+                                @Icons.Tag() تصنيفات المصاريف
+                            </a>
+                            <a class="nav-link @(isActive("AppSettings", null) ? "active" : "")" href="@Url.Action("Index", "AppSettings")">
+                                @Icons.Dashboard() إعدادات عامة
+                            </a>
+                        }
+                        @if (User.IsInRole(Modules.Admin))
+                        {
+                            <a class="nav-link @(isActive("Users", null) ? "active" : "")" href="@Url.Action("Index", "Users")">
+                                @Icons.IdCard() المستخدمون
+                            </a>
+                        }
+                    </div>
+                }
+            </nav>
+
+            <div class="sidebar-footer">&copy; @DateTime.Now.Year تكسي الاتحاد</div>
+        </aside>
+
+        <div class="main-wrap">
+            <header class="topbar">
+                <button type="button" class="sidebar-toggle" data-sidebar-toggle aria-label="القائمة">
+                    @Icons.Menu()
+                </button>
+                <h1 class="page-title">@ViewBag.Title</h1>
+                <div class="today-date">@DateTime.Now.ToString("dddd dd/MM/yyyy")</div>
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <div class="user-menu">
+                        <span class="user-name">@(ViewBag.CurrentDisplayName ?? User.Identity.Name)</span>
+                        @using (Html.BeginForm("Logout", "Account", FormMethod.Post, new { style = "display:inline" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">تسجيل خروج</button>
+                        }
+                    </div>
+                }
+            </header>
+
+            <main class="content-area">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <div class="toast-stack" aria-live="polite" aria-atomic="true">
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast align-items-center text-bg-success border-0" role="status" data-bs-delay="4000" data-auto-toast>
+                <div class="d-flex">
+                    <div class="toast-body d-flex align-items-center gap-2">@Icons.CheckCircle() @TempData["Success"]</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="toast align-items-center text-bg-danger border-0" role="alert" data-bs-delay="5000" data-auto-toast>
+                <div class="d-flex">
+                    <div class="toast-body d-flex align-items-center gap-2">@Icons.XCircle() @TempData["Error"]</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <script>window.appRoot = "@Url.Content("~/")";</script>
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/jqueryval")
+    @Scripts.Render("~/bundles/bootstrap")
+    @Scripts.Render("~/bundles/app")
+    @RenderSection("scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,43 @@
+﻿@model itehad.Models.ViewModels.TripListViewModel
+@using itehad.Models
+@{
+    Layout = "~/Views/Shared/_PrintLayout.cshtml";
+}
+
+<h2 class="h5 fw-bold mb-3">سجل الحركة اليومية &mdash; @Model.FilterDate.ToString("yyyy-MM-dd")</h2>
+
+<table class="table table-bordered table-sm">
+    <thead>
+        <tr>
+            <th>الرقم</th>
+            <th>الوقت</th>
+            <th>المصدر</th>
+            <th>الزبون</th>
+            <th>من - إلى</th>
+            <th>السائقون</th>
+            <th>الأجرة</th>
+            <th>الدفع</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var t in Model.Trips)
+        {
+            <tr>
+                <td>@t.Id</td>
+                <td>@t.TripDate.ToString("HH:mm")</td>
+                <td>@t.BookingSource.Name</td>
+                <td>@t.Customer.Name</td>
+                <td>@t.FromLocation.Name &larr; @t.ToLocation.Name</td>
+                <td>@string.Join("، ", t.TripDrivers.Select(td => td.Driver.Name))</td>
+                <td>@(t.Currency == CurrencyType.ILS ? "₪" : "$")@t.Fare.ToString("N0")</td>
+                <td>@(t.PaymentMethod == PaymentMethodType.Cash ? "نقدي" : "ذمم")</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<p class="fw-bold">
+    إجمالي النقدي: @("₪" + Model.CashILS.ToString("N0")) / @("$" + Model.CashUSD.ToString("N0"))
+    &nbsp;&mdash;&nbsp;
+    إجمالي الذمم: @("₪" + Model.CreditTotalILS.ToString("N0")) / @("$" + Model.CreditTotalUSD.ToString("N0"))
+</p>

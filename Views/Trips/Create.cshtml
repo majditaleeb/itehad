@@ -1,0 +1,188 @@
+﻿@model itehad.Models.ViewModels.TripFormViewModel
+@using itehad.Helpers
+@{
+    ViewBag.Title = "تسجيل رحلة جديدة";
+}
+
+<div class="table-card p-4">
+    @using (Html.BeginForm("Create", "Trips", FormMethod.Post))
+    {
+        @Html.Partial("_Form")
+    }
+</div>
+
+@* ---------- Batch queue: add several trips, save them all at once ---------- *@
+<div class="table-card p-4 mt-4" id="batchPanel" style="display:none">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h5 class="fw-bold mb-0">@Icons.List() قائمة الرحلات الجاهزة للحفظ (<span id="batchCount">0</span>)</h5>
+        <div class="text-muted small">كل رحلة ستحصل على رقم تسلسلي خاص بها تلقائيًا عند الحفظ</div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>التاريخ والوقت</th>
+                    <th>المصدر</th>
+                    <th>الزبون</th>
+                    <th>من - إلى</th>
+                    <th>السائقون</th>
+                    <th>الأجرة</th>
+                    <th>الدفع</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="batchBody"></tbody>
+        </table>
+    </div>
+
+    @using (Html.BeginForm("SaveBatch", "TripsBatch", FormMethod.Post, new { id = "batchForm", @class = "mt-3" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="tripsJson" id="batchJson" />
+        <button type="submit" class="btn btn-accent px-4">@Icons.CheckCircle() حفظ جميع الرحلات (<span id="batchCount2">0</span>)</button>
+        <button type="button" class="btn btn-outline-danger" id="batchClear">تفريغ القائمة</button>
+    }
+</div>
+
+@section scripts {
+<script>
+(function ($) {
+    "use strict";
+    var queue = [];
+
+    function selText(id) {
+        var $s = $("#" + id);
+        var v = $s.val();
+        return { value: v ? parseInt(v, 10) : 0, label: $s.find("option:selected").text() || "" };
+    }
+
+    function collect() {
+        var errors = [];
+        var tripDate = $("#TripDate").val();
+        var source = selText("BookingSourceId");
+        var customer = selText("CustomerId");
+        var from = selText("FromLocationId");
+        var to = selText("ToLocationId");
+        var requestType = parseInt($("#RequestType").val() || "0", 10);
+        var daysCount = parseInt($("[name='DaysCount']").val() || "0", 10);
+        var fare = $("[name='Fare']").val();
+        var currency = parseInt($("#Currency").val() || "0", 10);
+        var payment = parseInt($("#PaymentMethod").val() || "0", 10);
+        var notes = $("#Notes").val() || "";
+
+        var driverIds = [], driverNames = [];
+        $("input[name='DriverIds']:checked").each(function () {
+            driverIds.push(parseInt(this.value, 10));
+            driverNames.push($.trim($("label[for='" + this.id + "']").text()));
+        });
+
+        if (!tripDate) errors.push("التاريخ والوقت");
+        if (!source.value) errors.push("مصدر الحجز");
+        if (!customer.value) errors.push("الزبون");
+        if (!from.value) errors.push("موقع الانطلاق");
+        if (!to.value) errors.push("موقع الوصول");
+        if (!driverIds.length) errors.push("سائق واحد على الأقل");
+        if (fare === "" || isNaN(parseFloat(fare)) || parseFloat(fare) < 0) errors.push("الأجرة");
+        if (requestType === 1 && (!daysCount || daysCount < 1)) errors.push("عدد الأيام");
+
+        if (errors.length) {
+            $("[data-batch-error]").text("أكمل الحقول التالية قبل الإضافة: " + errors.join("، ")).show();
+            return null;
+        }
+        $("[data-batch-error]").hide();
+
+        return {
+            tripDate: tripDate,
+            bookingSourceId: source.value, sourceLabel: source.label,
+            customerId: customer.value, customerLabel: customer.label,
+            requestType: requestType,
+            daysCount: requestType === 1 ? daysCount : null,
+            fromLocationId: from.value, fromLabel: from.label,
+            toLocationId: to.value, toLabel: to.label,
+            driverIds: driverIds, driverLabel: driverNames.join("، "),
+            fare: String(parseFloat(fare)),
+            currency: currency,
+            paymentMethod: payment,
+            notes: notes
+        };
+    }
+
+    function render() {
+        var $b = $("#batchBody").empty();
+        queue.forEach(function (t, i) {
+            var cur = t.currency === 1 ? "$" : "₪";
+            var pay = t.paymentMethod === 1
+                ? '<span class="pill pill-red">ذمم</span>'
+                : '<span class="pill pill-green">نقدي</span>';
+            var d = t.tripDate.replace("T", " ");
+            $("<tr>")
+                .append($("<td>").addClass("fw-bold text-muted").text(i + 1))
+                .append($("<td>").text(d))
+                .append($("<td>").text(t.sourceLabel))
+                .append($("<td>").addClass("fw-semibold").text(t.customerLabel))
+                .append($("<td>").text(t.fromLabel + " ← " + t.toLabel))
+                .append($("<td>").text(t.driverLabel))
+                .append($("<td>").text(cur + t.fare))
+                .append($("<td>").html(pay))
+                .append($("<td>").addClass("text-start").append(
+                    $('<button type="button" class="btn btn-sm btn-outline-danger">إزالة</button>')
+                        .on("click", function () { queue.splice(i, 1); render(); })))
+                .appendTo($b);
+        });
+        $("#batchCount, #batchCount2").text(queue.length);
+        $("#batchPanel").toggle(queue.length > 0);
+    }
+
+    // Clear the whole form after adding a trip to the queue so the next
+    // trip is entered from scratch. Date resets to the current time.
+    function resetForm() {
+        var now = new Date();
+        var pad = function (n) { return String(n).padStart(2, "0"); };
+        $("#TripDate").val(now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
+            "T" + pad(now.getHours()) + ":" + pad(now.getMinutes()));
+        $("#BookingSourceId, #CustomerId, #FromLocationId, #ToLocationId").val("").trigger("change");
+        $("#RequestType").val("0").trigger("change");
+        $("[name='DaysCount']").val("");
+        $("input[name='DriverIds']").prop("checked", false);
+        $("[data-driver-filter]").val("").trigger("input");
+        $("[name='Fare']").val("");
+        $("#Currency").val("0");
+        $("#PaymentMethod").val("0");
+        $("#Notes").val("");
+        $("html, body").animate({ scrollTop: 0 }, 200);
+    }
+
+    $(document).on("click", "[data-batch-add]", function () {
+        var t = collect();
+        if (!t) return;
+        queue.push(t);
+        render();
+        resetForm();
+    });
+
+    $("#batchClear").on("click", function () {
+        if (confirm("هل تريد تفريغ قائمة الرحلات؟")) { queue = []; render(); }
+    });
+
+    $("#batchForm").on("submit", function () {
+        if (!queue.length) {
+            alert("القائمة فارغة — أضف رحلة واحدة على الأقل");
+            return false;
+        }
+        $("#batchJson").val(JSON.stringify(queue.map(function (t) {
+            return {
+                tripDate: t.tripDate, bookingSourceId: t.bookingSourceId,
+                customerId: t.customerId, requestType: t.requestType,
+                daysCount: t.daysCount, fromLocationId: t.fromLocationId,
+                toLocationId: t.toLocationId, driverIds: t.driverIds,
+                fare: t.fare, currency: t.currency,
+                paymentMethod: t.paymentMethod, notes: t.notes
+            };
+        })));
+        return true;
+    });
+})(jQuery);
+</script>
+}

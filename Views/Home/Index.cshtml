@@ -1,0 +1,128 @@
+﻿@model itehad.Models.ViewModels.DashboardViewModel
+@using itehad.Helpers
+@{
+    ViewBag.Title = "لوحة التحكم";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+        <h2 class="h4 mb-1 fw-bold">أهلاً بك @(ViewBag.CurrentDisplayName ?? "") 👋</h2>
+        <div class="text-muted">نظرة سريعة على حركة اليوم</div>
+    </div>
+    @if (User.IsInRole(Modules.Trips))
+    {
+        <a href="@Url.Action("Create", "Trips")" class="btn btn-accent">@Icons.PlusCircle() تسجيل رحلة جديدة</a>
+    }
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon amber">@Icons.Car()</div>
+            <div>
+                <div class="stat-value">@Model.TodayTripsCount</div>
+                <div class="stat-label">رحلات اليوم</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon green">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.TodayCashILS.ToString("N0")) <span class="fs-6 text-muted">/ @("$" + Model.TodayCashUSD.ToString("N0"))</span></div>
+                <div class="stat-label">النقد اليوم</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.TodayCreditILS.ToString("N0")) <span class="fs-6 text-muted">/ @("$" + Model.TodayCreditUSD.ToString("N0"))</span></div>
+                <div class="stat-label">ذمم اليوم غير محصّلة</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        @if (User.IsInRole(Modules.Attendance))
+        {
+            <a href="@Url.Action("Index", "Attendance")" class="stat-card text-decoration-none">
+                <div class="stat-icon blue">@Icons.Clock()</div>
+                <div>
+                    <div class="stat-value">@Model.DriversOnDutyCount</div>
+                    <div class="stat-label">سائق يعمل الآن</div>
+                </div>
+            </a>
+        }
+        else
+        {
+            <div class="stat-card">
+                <div class="stat-icon blue">@Icons.Clock()</div>
+                <div>
+                    <div class="stat-value">@Model.DriversOnDutyCount</div>
+                    <div class="stat-label">سائق يعمل الآن</div>
+                </div>
+            </div>
+        }
+    </div>
+    @if (User.IsInRole(Modules.Customers) && Model.OverLimitCustomersCount > 0)
+    {
+        <div class="col-6 col-lg-3">
+            <a href="@Url.Action("Index", "Customers")" class="stat-card text-decoration-none">
+                <div class="stat-icon red">@Icons.XCircle()</div>
+                <div>
+                    <div class="stat-value">@Model.OverLimitCustomersCount</div>
+                    <div class="stat-label">زبائن تجاوزوا حد الذمم</div>
+                </div>
+            </a>
+        </div>
+    }
+</div>
+
+@if (User.IsInRole(Modules.Customers))
+{
+    <div class="table-card">
+        <div class="card-header bg-white border-bottom px-3 py-3">أكبر الزبائن مديونية</div>
+        @if (Model.TopDebtors.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>الزبون</th>
+                            <th>ذمم بالشيقل</th>
+                            <th>ذمم بالدولار</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.TopDebtors)
+                        {
+                            <tr>
+                                <td class="fw-semibold">
+                                    @c.Name
+                                    @if (c.IsOverLimit)
+                                    {
+                                        <span class="pill pill-red">@Icons.XCircle() تجاوز الحد</span>
+                                    }
+                                </td>
+                                <td>@(c.OutstandingILS > 0 ? "₪" + c.OutstandingILS.ToString("N0") : "-")</td>
+                                <td>@(c.OutstandingUSD > 0 ? "$" + c.OutstandingUSD.ToString("N0") : "-")</td>
+                                <td class="text-start">
+                                    <a href="@Url.Action("Statement", "Customers", new { id = c.Id })" class="btn btn-sm btn-outline-secondary">كشف الحساب</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                @Icons.CheckCircle()
+                <div>لا توجد ذمم مستحقة حاليًا 🎉</div>
+            </div>
+        }
+    </div>
+}

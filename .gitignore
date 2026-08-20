@@ -1,0 +1,6 @@
+# ASP.NET runtime artifacts
+App_Data/
+*.user
+*.suo
+Thumbs.db
+desktop.ini

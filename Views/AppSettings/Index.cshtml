@@ -1,0 +1,22 @@
+﻿@model itehad.Models.AppSetting
+@{
+    ViewBag.Title = "إعدادات عامة";
+}
+
+<div class="table-card p-4" style="max-width:520px;">
+    @using (Html.BeginForm("Index", "AppSettings", FormMethod.Post))
+    {
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.Id)
+        <p class="text-muted">عند تجاوز رصيد ذمم الزبون لهذا الحد، سيظهر تنبيه بجانبه في شاشة الزبائن ولوحة التحكم. اترك القيمة صفر لتعطيل التنبيه لتلك العملة.</p>
+        <div class="mb-3">
+            <label class="form-label">حد التنبيه بالشيقل (₪)</label>
+            @Html.TextBoxFor(m => m.DebtAlertThresholdILS, new { type = "number", step = "0.01", min = "0", @class = "form-control" })
+        </div>
+        <div class="mb-3">
+            <label class="form-label">حد التنبيه بالدولار ($)</label>
+            @Html.TextBoxFor(m => m.DebtAlertThresholdUSD, new { type = "number", step = "0.01", min = "0", @class = "form-control" })
+        </div>
+        <button type="submit" class="btn btn-accent px-4">حفظ</button>
+    }
+</div>

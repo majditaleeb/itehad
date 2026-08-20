@@ -1,0 +1,11 @@
+﻿@model itehad.Models.ViewModels.ExpenseFormViewModel
+@{
+    ViewBag.Title = "تسجيل مصروف جديد";
+}
+
+<div class="table-card p-4" style="max-width:720px;">
+    @using (Html.BeginForm("Create", "Expenses", FormMethod.Post))
+    {
+        @Html.Partial("_Form")
+    }
+</div>

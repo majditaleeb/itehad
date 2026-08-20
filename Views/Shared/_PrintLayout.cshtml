@@ -1,0 +1,42 @@
+﻿@using itehad.Helpers
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - تكسي الاتحاد</title>
+    <link rel="icon" type="image/svg+xml" href="@Icons.TaxiLogoFaviconDataUri()" />
+    @Styles.Render("~/Content/css")
+    <style>
+        body { background: #fff; padding: 1.5rem; }
+        .print-header {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            border-bottom: 2px solid var(--accent-dark);
+            padding-bottom: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        .print-header .brand-logo { width: 40px; height: 40px; }
+        .print-header h1 { font-size: 1.1rem; font-weight: 800; margin: 0; }
+        .print-header p { margin: 0; color: var(--text-muted); font-size: .82rem; }
+        .no-print { }
+        @@media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-header">
+        @Icons.TaxiLogo()
+        <div>
+            <h1>تكسي الاتحاد</h1>
+            <p>@ViewBag.Title &mdash; @DateTime.Now.ToString("yyyy-MM-dd HH:mm")</p>
+        </div>
+        <button type="button" class="btn btn-accent btn-sm no-print ms-auto" onclick="window.print()">طباعة / حفظ PDF</button>
+    </div>
+
+    @RenderBody()
+</body>
+</html>

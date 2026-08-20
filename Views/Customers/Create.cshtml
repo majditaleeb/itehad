@@ -1,0 +1,24 @@
+﻿@model itehad.Models.Customer
+@{
+    ViewBag.Title = "زبون جديد";
+}
+
+<div class="table-card p-4" style="max-width:520px;">
+    @using (Html.BeginForm("Create", "Customers", FormMethod.Post))
+    {
+        @Html.AntiForgeryToken()
+        <div class="mb-3">
+            <label class="form-label">اسم الزبون</label>
+            @Html.TextBoxFor(m => m.Name, new { @class = "form-control" })
+            @Html.ValidationMessageFor(m => m.Name, "", new { @class = "text-danger small" })
+        </div>
+        <div class="mb-3">
+            <label class="form-label">رقم الهاتف</label>
+            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control" })
+        </div>
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-accent px-4">حفظ</button>
+            <a href="@Url.Action("Index")" class="btn btn-outline-secondary">إلغاء</a>
+        </div>
+    }
+</div>

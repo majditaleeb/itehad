@@ -1,0 +1,11 @@
+﻿@model itehad.Models.ViewModels.UserFormViewModel
+@{
+    ViewBag.Title = "مستخدم جديد";
+}
+
+<div class="table-card p-4" style="max-width:640px;">
+    @using (Html.BeginForm("Create", "Users", FormMethod.Post))
+    {
+        @Html.Partial("_Form")
+    }
+</div>
