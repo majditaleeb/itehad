@@ -33,10 +33,23 @@ public class ExcelController : Controller
 
     // ============================ Daily trips log ============================
     // GET /Excel/ExportTrips?date=yyyy-MM-dd
+    // GET /Excel/ExportTrips?from=yyyy-MM-dd&to=yyyy-MM-dd   (inclusive range)
     [Authorize(Roles = "Trips")]
-    public ActionResult ExportTrips(DateTime? date)
+    public ActionResult ExportTrips(DateTime? date, DateTime? from, DateTime? to)
     {
-        var day = (date ?? DateTime.Today).Date;
+        DateTime start, end;
+        if (from.HasValue || to.HasValue)
+        {
+            start = (from ?? to.Value).Date;
+            end = (to ?? from.Value).Date;
+            if (end < start) { var swap = start; start = end; end = swap; }
+        }
+        else
+        {
+            start = end = (date ?? DateTime.Today).Date;
+        }
+
+        bool isRange = start != end;
 
         var rows = Query(@"
             SELECT t.Id, t.TripDate, bs.Name AS Source, c.Name AS Customer,
@@ -52,22 +65,29 @@ public class ExcelController : Controller
                 JOIN dbo.Locations tl ON tl.Id = t.ToLocationId
             WHERE t.TripDate >= @d AND t.TripDate < @d2
             ORDER BY t.TripDate",
-            new SqlParameter("@d", day), new SqlParameter("@d2", day.AddDays(1)));
+            new SqlParameter("@d", start), new SqlParameter("@d2", end.AddDays(1)));
 
         var x = new Xlsx("سجل الحركة");
-        x.SetColumns(8, 9, 16, 18, 14, 14, 24, 12, 9, 9, 30);
-        const int COLS = 11;
+        if (isRange) x.SetColumns(8, 12, 9, 16, 18, 14, 14, 24, 12, 9, 9, 30);
+        else x.SetColumns(8, 9, 16, 18, 14, 14, 24, 12, 9, 9, 30);
+        int COLS = isRange ? 12 : 11;
 
-        int r = x.AddRow(34, Xlsx.T("تكسي الاتحاد — سجل الحركة اليومية", Xlsx.StTitle));
+        int r = x.AddRow(34, Xlsx.T("تكسي الاتحاد — سجل الحركة" + (isRange ? "" : " اليومية"), Xlsx.StTitle));
         x.Merge(r, 1, COLS);
-        r = x.AddRow(22, Xlsx.T("التاريخ: " + day.ToString("yyyy-MM-dd") + "   •   عدد الرحلات: " + rows.Rows.Count, Xlsx.StSubtitle));
+        var period = isRange
+            ? "الفترة: من " + start.ToString("yyyy-MM-dd") + " إلى " + end.ToString("yyyy-MM-dd")
+            : "التاريخ: " + start.ToString("yyyy-MM-dd");
+        r = x.AddRow(22, Xlsx.T(period + "   •   عدد الرحلات: " + rows.Rows.Count, Xlsx.StSubtitle));
         x.Merge(r, 1, COLS);
 
-        x.AddRow(24,
-            Xlsx.T("الرقم", Xlsx.StHeader), Xlsx.T("الوقت", Xlsx.StHeader), Xlsx.T("المصدر", Xlsx.StHeader),
+        var header = new List<Xlsx.Cell> { Xlsx.T("الرقم", Xlsx.StHeader) };
+        if (isRange) header.Add(Xlsx.T("التاريخ", Xlsx.StHeader));
+        header.AddRange(new[] {
+            Xlsx.T("الوقت", Xlsx.StHeader), Xlsx.T("المصدر", Xlsx.StHeader),
             Xlsx.T("الزبون", Xlsx.StHeader), Xlsx.T("من", Xlsx.StHeader), Xlsx.T("إلى", Xlsx.StHeader),
             Xlsx.T("السائقون", Xlsx.StHeader), Xlsx.T("الأجرة", Xlsx.StHeader), Xlsx.T("العملة", Xlsx.StHeader),
-            Xlsx.T("الدفع", Xlsx.StHeader), Xlsx.T("ملاحظات", Xlsx.StHeader));
+            Xlsx.T("الدفع", Xlsx.StHeader), Xlsx.T("ملاحظات", Xlsx.StHeader) });
+        x.AddRow(24, header.ToArray());
         x.FreezeAfterRow(3);
 
         decimal cashIls = 0, cashUsd = 0, creditIls = 0, creditUsd = 0;
@@ -81,9 +101,12 @@ public class ExcelController : Controller
             if (credit) { if (usd) creditUsd += fare; else creditIls += fare; }
             else { if (usd) cashUsd += fare; else cashIls += fare; }
 
-            x.AddRow(20,
-                Xlsx.N(Convert.ToDecimal(row["Id"]), z ? Xlsx.StSerialZ : Xlsx.StSerial),
-                Xlsx.D(Convert.ToDateTime(row["TripDate"]), z ? Xlsx.StTimeZ : Xlsx.StTime),
+            var when = Convert.ToDateTime(row["TripDate"]);
+            var cells = new List<Xlsx.Cell> {
+                Xlsx.N(Convert.ToDecimal(row["Id"]), z ? Xlsx.StSerialZ : Xlsx.StSerial) };
+            if (isRange) cells.Add(Xlsx.D(when, z ? Xlsx.StDateZ : Xlsx.StDate));
+            cells.AddRange(new[] {
+                Xlsx.D(when, z ? Xlsx.StTimeZ : Xlsx.StTime),
                 Xlsx.T((string)row["Source"], z ? Xlsx.StTextZ : Xlsx.StText),
                 Xlsx.T((string)row["Customer"], z ? Xlsx.StTextZ : Xlsx.StText),
                 Xlsx.T((string)row["FromLoc"], z ? Xlsx.StTextZ : Xlsx.StText),
@@ -92,7 +115,8 @@ public class ExcelController : Controller
                 Xlsx.N(fare, z ? Xlsx.StMoneyZ : Xlsx.StMoney),
                 Xlsx.T(usd ? "دولار" : "شيقل", z ? Xlsx.StCenterZ : Xlsx.StCenter),
                 Xlsx.T(credit ? "ذمم" : "نقدي", z ? Xlsx.StCenterZ : Xlsx.StCenter),
-                Xlsx.T((string)row["Notes"], z ? Xlsx.StTextZ : Xlsx.StText));
+                Xlsx.T((string)row["Notes"], z ? Xlsx.StTextZ : Xlsx.StText) });
+            x.AddRow(20, cells.ToArray());
         }
 
         x.AddRow(8);
@@ -101,7 +125,8 @@ public class ExcelController : Controller
         AddSummary(x, "إجمالي الذمم (شيقل)", creditIls);
         AddSummary(x, "إجمالي الذمم (دولار)", creditUsd);
 
-        var name = "سجل-الحركة-" + day.ToString("yyyy-MM-dd") + ".xlsx";
+        var name = "سجل-الحركة-" + start.ToString("yyyy-MM-dd")
+                 + (isRange ? "_" + end.ToString("yyyy-MM-dd") : "") + ".xlsx";
         return File(x.Build(), XlsxMime, name);
     }
 

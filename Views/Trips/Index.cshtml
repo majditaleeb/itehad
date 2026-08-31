@@ -3,23 +3,51 @@
 @using itehad.Models
 @{
     ViewBag.Title = "سجل الحركة اليومية";
-    var prevDate = Model.FilterDate.AddDays(-1).ToString("yyyy-MM-dd");
-    var nextDate = Model.FilterDate.AddDays(1).ToString("yyyy-MM-dd");
-    var todayDate = DateTime.Today.ToString("yyyy-MM-dd");
+    var from = Model.FromDate.ToString("yyyy-MM-dd");
+    var to = Model.ToDate.ToString("yyyy-MM-dd");
+    var span = Model.DaysSpan;
+    var prevFrom = Model.FromDate.AddDays(-span).ToString("yyyy-MM-dd");
+    var prevTo = Model.ToDate.AddDays(-span).ToString("yyyy-MM-dd");
+    var nextFrom = Model.FromDate.AddDays(span).ToString("yyyy-MM-dd");
+    var nextTo = Model.ToDate.AddDays(span).ToString("yyyy-MM-dd");
+
+    var today = DateTime.Today;
+    var monthStart = new DateTime(today.Year, today.Month, 1);
+    var lastMonthStart = monthStart.AddMonths(-1);
+    var f = "yyyy-MM-dd";
+
+    Func<string, string, bool> isOn = (a, b) => from == a && to == b;
+    Func<string, string, string> preset = (a, b) =>
+        "btn btn-sm " + (isOn(a, b) ? "btn-accent" : "btn-outline-secondary");
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <div class="d-flex align-items-center gap-2">
-        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", new { date = prevDate })">&raquo;</a>
-        <form method="get" action="@Url.Action("Index")" class="d-flex align-items-center gap-2">
-            <input type="date" name="date" class="form-control form-control-sm" value="@Model.FilterDate.ToString("yyyy-MM-dd")" onchange="this.form.submit()" />
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div class="d-flex flex-column gap-2">
+        <form method="get" action="@Url.Action("Index")" class="d-flex align-items-center gap-2 flex-wrap">
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", new { from = prevFrom, to = prevTo })" title="الفترة السابقة">&raquo;</a>
+            <span class="text-muted small">من</span>
+            <input type="date" name="from" class="form-control form-control-sm" style="width:9.5rem" value="@from" />
+            <span class="text-muted small">إلى</span>
+            <input type="date" name="to" class="form-control form-control-sm" style="width:9.5rem" value="@to" />
+            <button type="submit" class="btn btn-accent btn-sm">بحث</button>
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", new { from = nextFrom, to = nextTo })" title="الفترة التالية">&laquo;</a>
         </form>
-        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", new { date = nextDate })">&laquo;</a>
-        <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", new { date = todayDate })">اليوم</a>
+        <div class="d-flex align-items-center gap-1 flex-wrap">
+            <a class="@preset(today.ToString(f), today.ToString(f))" href="@Url.Action("Index", new { from = today.ToString(f), to = today.ToString(f) })">اليوم</a>
+            <a class="@preset(today.AddDays(-1).ToString(f), today.AddDays(-1).ToString(f))" href="@Url.Action("Index", new { from = today.AddDays(-1).ToString(f), to = today.AddDays(-1).ToString(f) })">أمس</a>
+            <a class="@preset(today.AddDays(-6).ToString(f), today.ToString(f))" href="@Url.Action("Index", new { from = today.AddDays(-6).ToString(f), to = today.ToString(f) })">آخر ٧ أيام</a>
+            <a class="@preset(today.AddDays(-29).ToString(f), today.ToString(f))" href="@Url.Action("Index", new { from = today.AddDays(-29).ToString(f), to = today.ToString(f) })">آخر ٣٠ يوم</a>
+            <a class="@preset(monthStart.ToString(f), today.ToString(f))" href="@Url.Action("Index", new { from = monthStart.ToString(f), to = today.ToString(f) })">هذا الشهر</a>
+            <a class="@preset(lastMonthStart.ToString(f), monthStart.AddDays(-1).ToString(f))" href="@Url.Action("Index", new { from = lastMonthStart.ToString(f), to = monthStart.AddDays(-1).ToString(f) })">الشهر الماضي</a>
+            @if (Model.IsRange)
+            {
+                <span class="badge bg-secondary ms-1">@Model.DaysSpan يوم &bull; @Model.TotalCount رحلة</span>
+            }
+        </div>
     </div>
     <div class="d-flex gap-2">
-        <a href="@Url.Action("Print", new { date = Model.FilterDate.ToString("yyyy-MM-dd") })" target="_blank" class="btn btn-outline-secondary">طباعة / PDF</a>
-        <a href="@Url.Action("ExportTrips", "Excel", new { date = Model.FilterDate.ToString("yyyy-MM-dd") })" class="btn btn-outline-secondary">تصدير Excel</a>
+        <a href="@Url.Action("Print", new { from = from, to = to })" target="_blank" class="btn btn-outline-secondary">طباعة / PDF</a>
+        <a href="@Url.Action("ExportTrips", "Excel", new { from = from, to = to })" class="btn btn-outline-secondary">تصدير Excel</a>
         <a href="@Url.Action("Create")" class="btn btn-accent">@Icons.PlusCircle() تسجيل رحلة جديدة</a>
     </div>
 </div>
@@ -71,6 +99,10 @@
                 <thead>
                     <tr>
                         <th>الرقم</th>
+                        @if (Model.IsRange)
+                        {
+                            <th>التاريخ</th>
+                        }
                         <th>الوقت</th>
                         <th>المصدر</th>
                         <th>الزبون</th>
@@ -87,6 +119,10 @@
                     {
                         <tr>
                             <td class="fw-bold text-muted">@t.Id</td>
+                            @if (Model.IsRange)
+                            {
+                                <td class="text-nowrap">@t.TripDate.ToString("yyyy-MM-dd")</td>
+                            }
                             <td>@t.TripDate.ToString("HH:mm")</td>
                             <td>@t.BookingSource.Name</td>
                             <td class="fw-semibold">@t.Customer.Name</td>
@@ -111,7 +147,9 @@
                                     {
                                         @Html.AntiForgeryToken()
                                         <input type="hidden" name="id" value="@t.Id" />
-                                        <input type="hidden" name="date" value="@Model.FilterDate.ToString("yyyy-MM-dd")" />
+                                        <input type="hidden" name="from" value="@from" />
+                                        <input type="hidden" name="to" value="@to" />
+                                        <input type="hidden" name="page" value="@Model.Page" />
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف">@Icons.XCircle()</button>
                                     }
                                 </div>
@@ -126,7 +164,44 @@
     {
         <div class="empty-state">
             @Icons.List()
-            <div>لا توجد رحلات مسجّلة في هذا التاريخ</div>
+            <div>@(Model.IsRange ? "لا توجد رحلات مسجّلة في هذه الفترة" : "لا توجد رحلات مسجّلة في هذا التاريخ")</div>
         </div>
     }
 </div>
+
+@if (Model.IsPaged)
+{
+    var pageCount = Model.PageCount;
+    var firstShown = Math.Max(1, Model.Page - 2);
+    var lastShown = Math.Min(pageCount, firstShown + 4);
+    firstShown = Math.Max(1, lastShown - 4);
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+        <div class="text-muted small">
+            عرض @Model.FirstRowNumber &ndash; @Model.LastRowNumber من أصل @Model.TotalCount رحلة
+            &nbsp;&bull;&nbsp; صفحة @Model.Page من @pageCount
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { from = from, to = to, page = 1 })">الأولى</a>
+                </li>
+                <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { from = from, to = to, page = Model.Page - 1 })">&raquo;</a>
+                </li>
+                @for (var p = firstShown; p <= lastShown; p++)
+                {
+                    <li class="page-item @(p == Model.Page ? "active" : "")">
+                        <a class="page-link" href="@Url.Action("Index", new { from = from, to = to, page = p })">@p</a>
+                    </li>
+                }
+                <li class="page-item @(Model.Page >= pageCount ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { from = from, to = to, page = Model.Page + 1 })">&laquo;</a>
+                </li>
+                <li class="page-item @(Model.Page >= pageCount ? "disabled" : "")">
+                    <a class="page-link" href="@Url.Action("Index", new { from = from, to = to, page = pageCount })">الأخيرة</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}

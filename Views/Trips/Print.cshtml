@@ -1,15 +1,30 @@
-﻿@model itehad.Models.ViewModels.TripListViewModel
+@model itehad.Models.ViewModels.TripListViewModel
 @using itehad.Models
 @{
     Layout = "~/Views/Shared/_PrintLayout.cshtml";
 }
 
-<h2 class="h5 fw-bold mb-3">سجل الحركة اليومية &mdash; @Model.FilterDate.ToString("yyyy-MM-dd")</h2>
+<h2 class="h5 fw-bold mb-1">
+    @(Model.IsRange ? "سجل الحركة" : "سجل الحركة اليومية") &mdash;
+    @if (Model.IsRange)
+    {
+        <text>من @Model.FromDate.ToString("yyyy-MM-dd") إلى @Model.ToDate.ToString("yyyy-MM-dd")</text>
+    }
+    else
+    {
+        <text>@Model.FromDate.ToString("yyyy-MM-dd")</text>
+    }
+</h2>
+<p class="text-muted small mb-3">عدد الرحلات: @Model.Trips.Count</p>
 
 <table class="table table-bordered table-sm">
     <thead>
         <tr>
             <th>الرقم</th>
+            @if (Model.IsRange)
+            {
+                <th>التاريخ</th>
+            }
             <th>الوقت</th>
             <th>المصدر</th>
             <th>الزبون</th>
@@ -24,6 +39,10 @@
         {
             <tr>
                 <td>@t.Id</td>
+                @if (Model.IsRange)
+                {
+                    <td>@t.TripDate.ToString("yyyy-MM-dd")</td>
+                }
                 <td>@t.TripDate.ToString("HH:mm")</td>
                 <td>@t.BookingSource.Name</td>
                 <td>@t.Customer.Name</td>

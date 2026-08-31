@@ -37,7 +37,7 @@ public class AuditController : Controller
     // POST /Audit/DeleteTrip  -> delete one trip (called from the daily log)
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public ActionResult DeleteTrip(int id, string date)
+    public ActionResult DeleteTrip(int id, string date, string from, string to, int? page)
     {
         using (var con = new SqlConnection(ConnStr))
         {
@@ -69,6 +69,16 @@ public class AuditController : Controller
         }
 
         TempData["Success"] = "تم حذف الرحلة وتسجيلها في سجل التعديلات";
+
+        // Return to whatever period the log was showing.
+        DateTime f, t;
+        if (DateTime.TryParse(from, out f) && DateTime.TryParse(to, out t))
+            return RedirectToAction("Index", "Trips", new
+            {
+                from = f.ToString("yyyy-MM-dd"),
+                to = t.ToString("yyyy-MM-dd"),
+                page = page.HasValue && page.Value > 1 ? page : null
+            });
 
         DateTime parsed;
         if (DateTime.TryParse(date, out parsed))
