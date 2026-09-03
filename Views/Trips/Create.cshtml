@@ -14,7 +14,7 @@
 @* ---------- Batch queue: add several trips, save them all at once ---------- *@
 <div class="table-card p-4 mt-4" id="batchPanel" style="display:none">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h5 class="fw-bold mb-0">@Icons.List() قائمة الرحلات الجاهزة للحفظ (<span id="batchCount">0</span>)</h5>
+        <h5 class="fw-bold mb-0">@Icons.List() قائمة الرحلات الجاهزة للحفظ (<span id="batchCount">0</span> من @TripsBatchController.MaxBatchSize)</h5>
         <div class="text-muted small">كل رحلة ستحصل على رقم تسلسلي خاص بها تلقائيًا عند الحفظ</div>
     </div>
 
@@ -51,6 +51,7 @@
 (function ($) {
     "use strict";
     var queue = [];
+    var MAX = @TripsBatchController.MaxBatchSize;
 
     function selText(id) {
         var $s = $("#" + id);
@@ -75,7 +76,8 @@
         var driverIds = [], driverNames = [];
         $("input[name='DriverIds']:checked").each(function () {
             driverIds.push(parseInt(this.value, 10));
-            driverNames.push($.trim($("label[for='" + this.id + "']").text()));
+            driverNames.push($(this).data("driver-name") ||
+                             $.trim($("label[for='" + this.id + "']").text()));
         });
 
         if (!tripDate) errors.push("التاريخ والوقت");
@@ -135,18 +137,13 @@
         $("#batchPanel").toggle(queue.length > 0);
     }
 
-    // Clear the whole form after adding a trip to the queue so the next
-    // trip is entered from scratch. Date resets to the current time.
+    // Clear the form after adding a trip to the queue. التاريخ والوقت ومصدر
+    // الحجز وحالة الطلب بتضل زي ما هنّ لأن غالباً الرحلات المتتالية بتشترك
+    // فيهن؛ بترجع للوضع الافتراضي لما تتحفظ القائمة وتتفتح الصفحة من جديد.
     function resetForm() {
-        var now = new Date();
-        var pad = function (n) { return String(n).padStart(2, "0"); };
-        $("#TripDate").val(now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
-            "T" + pad(now.getHours()) + ":" + pad(now.getMinutes()));
-        $("#BookingSourceId, #CustomerId, #FromLocationId, #ToLocationId").val("").trigger("change");
-        $("#RequestType").val("0").trigger("change");
-        $("[name='DaysCount']").val("");
+        $("#CustomerId, #FromLocationId, #ToLocationId").val("").trigger("change");
         $("input[name='DriverIds']").prop("checked", false);
-        $("[data-driver-filter]").val("").trigger("input");
+        $("[data-driver-filter]").val("").trigger("input");   // بيعيد حساب العدّاد كمان
         $("[name='Fare']").val("");
         $("#Currency").val("0");
         $("#PaymentMethod").val("0");
@@ -155,6 +152,14 @@
     }
 
     $(document).on("click", "[data-batch-add]", function () {
+        // نفس الحد اللي بيتحقق منه السيرفر — بنوقف هون عشان ما يضيع تعبه
+        // لما يوصل للحد ويرجع الحفظ برسالة خطأ.
+        if (queue.length >= MAX) {
+            $("[data-batch-error]").text(
+                "وصلت الحد الأقصى " + MAX + " رحلة بالدفعة الواحدة — احفظ القائمة وبعدين كمّل.").show();
+            $("html, body").animate({ scrollTop: 0 }, 200);
+            return;
+        }
         var t = collect();
         if (!t) return;
         queue.push(t);

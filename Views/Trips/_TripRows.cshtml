@@ -1,0 +1,79 @@
+@model itehad.Models.ViewModels.TripListViewModel
+@using itehad.Helpers
+@using itehad.Models
+@using itehad.Models.ViewModels
+@* صفوف الجدول لحالها — هاي القطعة اللي بتتبدّل مع كل بحث حيّ. *@
+@{
+    var from = Model.FromDate.ToString("yyyy-MM-dd");
+    var to = Model.ToDate.ToString("yyyy-MM-dd");
+    var filter = Model.Filter ?? new TripFilter();
+    var cols = Model.IsRange ? 11 : 10;
+}
+@if (Model.Trips.Any())
+{
+    foreach (var t in Model.Trips)
+    {
+        <tr>
+            <td class="fw-bold text-muted">@t.Id</td>
+            @if (Model.IsRange)
+            {
+                <td class="text-nowrap">@t.TripDate.ToString("yyyy-MM-dd")</td>
+            }
+            <td>@t.TripDate.ToString("HH:mm")</td>
+            <td>@t.BookingSource.Name</td>
+            <td class="fw-semibold">@t.Customer.Name</td>
+            <td>@t.FromLocation.Name <span class="route-arrow">←</span> @t.ToLocation.Name</td>
+            <td>@string.Join("، ", t.TripDrivers.Select(td => td.Driver.Name))</td>
+            <td>@(t.Currency == CurrencyType.ILS ? "₪" : "$")@t.Fare.ToString("N0")</td>
+            <td>
+                @if (t.PaymentMethod == PaymentMethodType.Cash)
+                {
+                    <span class="pill pill-green">نقدي</span>
+                }
+                else
+                {
+                    <span class="pill pill-red">ذمم</span>
+                }
+            </td>
+            <td class="text-muted small">@t.Notes</td>
+            <td class="text-start">
+                <div class="d-flex gap-1 justify-content-start">
+                    <a href="@Url.Action("Edit", new { id = t.Id })" class="btn btn-sm btn-outline-secondary" title="تعديل">@Icons.Edit()</a>
+                    @using (Html.BeginForm("DeleteTrip", "Audit", FormMethod.Post, new { style = "display:inline", onsubmit = "return confirm('هل أنت متأكد من حذف هذه الرحلة؟ لا يمكن التراجع عن الحذف.');" }))
+                    {
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="id" value="@t.Id" />
+                        <input type="hidden" name="from" value="@from" />
+                        <input type="hidden" name="to" value="@to" />
+                        <input type="hidden" name="page" value="@Model.Page" />
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="حذف">@Icons.XCircle()</button>
+                    }
+                </div>
+            </td>
+        </tr>
+    }
+}
+else
+{
+    <tr class="no-hover">
+        <td colspan="@cols" class="p-0">
+            <div class="empty-state">
+                @Icons.List()
+                <div>
+                    @if (!filter.IsEmpty)
+                    {
+                        <text>ما في رحلات تطابق البحث — جرّب تمسح شي من خانات البحث</text>
+                    }
+                    else if (Model.IsRange)
+                    {
+                        <text>لا توجد رحلات مسجّلة في هذه الفترة</text>
+                    }
+                    else
+                    {
+                        <text>لا توجد رحلات مسجّلة في هذا التاريخ</text>
+                    }
+                </div>
+            </div>
+        </td>
+    </tr>
+}

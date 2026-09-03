@@ -57,23 +57,48 @@
 
     <div class="col-12">
         <label class="form-label">السائقون / السيارات</label>
-        <input type="text" class="form-control mb-2" placeholder="فلترة حسب اسم السائق..." data-driver-filter>
-        <div class="driver-checklist" data-driver-checklist>
-            @if (Model.DriverOptions != null && Model.DriverOptions.Any())
-            {
-                foreach (var d in Model.DriverOptions)
+        @* بطاقات جنب بعض بدل قائمة طويلة نازلة، مع فلترة بتشتغل على الاسم ورقم
+           السيارة سوا — الهدف يلاقي السائق بضربة عين وهو عم يسجّل بسرعة. *@
+        <div class="driver-picker" data-driver-picker>
+            <div class="driver-toolbar">
+                <input type="search" class="form-control form-control-sm" autocomplete="off"
+                       placeholder="اكتب اسم السائق أو رقم السيارة…" data-driver-filter>
+                <span class="driver-count" data-driver-count></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-driver-clear hidden>إلغاء التحديد</button>
+            </div>
+            <div class="driver-grid" data-driver-checklist>
+                @if (Model.DriverOptions != null && Model.DriverOptions.Any())
                 {
-                    var isChecked = Model.DriverIds != null && Model.DriverIds.Contains(int.Parse(d.Value));
-                    <div class="form-check" data-driver-row>
-                        <input class="form-check-input" type="checkbox" name="DriverIds" value="@d.Value" id="driver_@d.Value" @(isChecked ? "checked" : "") />
-                        <label class="form-check-label" for="driver_@d.Value">@d.Text</label>
-                    </div>
+                    foreach (var d in Model.DriverOptions)
+                    {
+                        var isChecked = Model.DriverIds != null && Model.DriverIds.Contains(int.Parse(d.Value));
+                        var text = d.Text ?? "";
+                        var cut = text.LastIndexOf(" - ", StringComparison.Ordinal);
+                        var name = cut > 0 ? text.Substring(0, cut) : text;
+                        var car = cut > 0 ? text.Substring(cut + 3) : "";
+                        <div class="driver-chip" data-driver-row data-search="@text">
+                            <input class="driver-chip-input" type="checkbox" name="DriverIds" value="@d.Value"
+                                   id="driver_@d.Value" data-driver-name="@name" @(isChecked ? "checked" : "") />
+                            <label class="driver-chip-face" for="driver_@d.Value">
+                                <span class="driver-tick" aria-hidden="true"></span>
+                                <span class="driver-text">
+                                    @* dir="auto" عشان الأسماء الإنجليزية ما تنعكس علامات ترقيمها *@
+                                    <span class="driver-name" dir="auto">@name</span>
+                                    @if (car.Length > 0)
+                                    {
+                                        <span class="driver-car">@car</span>
+                                    }
+                                </span>
+                            </label>
+                        </div>
+                    }
                 }
-            }
-            else
-            {
-                <div class="text-muted small p-2">لا يوجد سائقون فعّالون - أضف سائقًا من شاشة السائقين أولًا</div>
-            }
+                else
+                {
+                    <div class="text-muted small p-2">لا يوجد سائقون فعّالون - أضف سائقًا من شاشة السائقين أولًا</div>
+                }
+            </div>
+            <div class="driver-none" data-driver-empty hidden>ما في سائق بهذا الاسم</div>
         </div>
         @Html.ValidationMessageFor(m => m.DriverIds, "", new { @class = "text-danger small" })
     </div>

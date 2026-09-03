@@ -16,6 +16,9 @@ using Newtonsoft.Json.Linq;
 [Authorize(Roles = "Trips")]
 public class TripsBatchController : Controller
 {
+    /// <summary>أقصى عدد رحلات بالدفعة الواحدة. صفحة Create بتقرأه من هون.</summary>
+    public const int MaxBatchSize = 70;
+
     private static string ConnStr
     {
         get { return ConfigurationManager.ConnectionStrings["ApplicationDbContext"].ConnectionString; }
@@ -34,9 +37,9 @@ public class TripsBatchController : Controller
             TempData["Error"] = "لا توجد رحلات في القائمة للحفظ";
             return RedirectToAction("Create", "Trips");
         }
-        if (items.Count > 50)
+        if (items.Count > MaxBatchSize)
         {
-            TempData["Error"] = "الحد الأقصى 50 رحلة في الدفعة الواحدة";
+            TempData["Error"] = "الحد الأقصى " + MaxBatchSize + " رحلة في الدفعة الواحدة";
             return RedirectToAction("Create", "Trips");
         }
 

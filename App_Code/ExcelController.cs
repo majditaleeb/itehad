@@ -35,8 +35,11 @@ public class ExcelController : Controller
     // GET /Excel/ExportTrips?date=yyyy-MM-dd
     // GET /Excel/ExportTrips?from=yyyy-MM-dd&to=yyyy-MM-dd   (inclusive range)
     [Authorize(Roles = "Trips")]
-    public ActionResult ExportTrips(DateTime? date, DateTime? from, DateTime? to)
+    public ActionResult ExportTrips(DateTime? date, DateTime? from, DateTime? to,
+                                    itehad.Models.ViewModels.TripFilter filter)
     {
+        filter = filter ?? new itehad.Models.ViewModels.TripFilter();
+
         DateTime start, end;
         if (from.HasValue || to.HasValue)
         {
@@ -51,6 +54,17 @@ public class ExcelController : Controller
 
         bool isRange = start != end;
 
+        // نفس بحث الأعمدة اللي على الشاشة بينطبق هون كمان، وإلا الملف المصدَّر
+        // بيطلع غير اللي المستخدم شايفه. الشروط بتتبنى من نفس الكلاس.
+        var args = new Dictionary<string, object>();
+        var extraWhere = filter.SqlWhere(args);
+        var ps = new List<SqlParameter>
+        {
+            new SqlParameter("@d", start),
+            new SqlParameter("@d2", end.AddDays(1))
+        };
+        foreach (var kv in args) { ps.Add(new SqlParameter(kv.Key, kv.Value)); }
+
         var rows = Query(@"
             SELECT t.Id, t.TripDate, bs.Name AS Source, c.Name AS Customer,
                    fl.Name AS FromLoc, tl.Name AS ToLoc,
@@ -63,9 +77,9 @@ public class ExcelController : Controller
                 JOIN dbo.Customers c ON c.Id = t.CustomerId
                 JOIN dbo.Locations fl ON fl.Id = t.FromLocationId
                 JOIN dbo.Locations tl ON tl.Id = t.ToLocationId
-            WHERE t.TripDate >= @d AND t.TripDate < @d2
+            WHERE t.TripDate >= @d AND t.TripDate < @d2" + extraWhere + @"
             ORDER BY t.TripDate",
-            new SqlParameter("@d", start), new SqlParameter("@d2", end.AddDays(1)));
+            ps.ToArray());
 
         var x = new Xlsx("سجل الحركة");
         if (isRange) x.SetColumns(8, 12, 9, 16, 18, 14, 14, 24, 12, 9, 9, 30);

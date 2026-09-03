@@ -1,0 +1,54 @@
+@model itehad.Models.ViewModels.TripListViewModel
+@using itehad.Helpers
+@using itehad.Models.ViewModels
+@*
+    كروت الملخّص الأربعة. أرقامها بتتحسب على الفترة كلها بعد تطبيق بحث الأعمدة،
+    فهي دايماً بتطابق اللي ظاهر بالجدول. وكل كرت بيفتح بوب-أب بتفاصيل رقمه.
+*@
+@{
+    var f = Model.Filter ?? new TripFilter();
+    var period = new { from = Model.FromDate.ToString("yyyy-MM-dd"), to = Model.ToDate.ToString("yyyy-MM-dd") };
+
+    Func<int, int, string> breakUrl = (pay, curr) =>
+        Url.Action("Breakdown", f.With(new { period.from, period.to, payment = pay, currency = curr }));
+}
+
+<span hidden data-total="@Model.TotalCount"></span>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <button type="button" class="stat-card stat-card-click" data-breakdown="@breakUrl(0, 0)" data-breakdown-title="نقدي (شيقل)">
+            <div class="stat-icon green">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.CashILS.ToString("N0"))</div>
+                <div class="stat-label">نقدي (شيقل)</div>
+            </div>
+        </button>
+    </div>
+    <div class="col-6 col-lg-3">
+        <button type="button" class="stat-card stat-card-click" data-breakdown="@breakUrl(0, 1)" data-breakdown-title="نقدي (دولار)">
+            <div class="stat-icon green">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("$" + Model.CashUSD.ToString("N0"))</div>
+                <div class="stat-label">نقدي (دولار)</div>
+            </div>
+        </button>
+    </div>
+    <div class="col-6 col-lg-3">
+        <button type="button" class="stat-card stat-card-click" data-breakdown="@breakUrl(1, 0)" data-breakdown-title="إجمالي الذمم (شيقل)">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.CreditTotalILS.ToString("N0"))</div>
+                <div class="stat-label">إجمالي الذمم (شيقل)</div>
+            </div>
+        </button>
+    </div>
+    <div class="col-6 col-lg-3">
+        <button type="button" class="stat-card stat-card-click" data-breakdown="@breakUrl(1, 1)" data-breakdown-title="إجمالي الذمم (دولار)">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("$" + Model.CreditTotalUSD.ToString("N0"))</div>
+                <div class="stat-label">إجمالي الذمم (دولار)</div>
+            </div>
+        </button>
+    </div>
+</div>

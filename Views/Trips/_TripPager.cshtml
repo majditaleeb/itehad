@@ -1,0 +1,51 @@
+@model itehad.Models.ViewModels.TripListViewModel
+@using itehad.Models.ViewModels
+@* عدّاد النتائج + أزرار الصفحات. كل رابط بيحمل بحث الأعمدة معه. *@
+@{
+    var f = Model.Filter ?? new TripFilter();
+    var from = Model.FromDate.ToString("yyyy-MM-dd");
+    var to = Model.ToDate.ToString("yyyy-MM-dd");
+    Func<int, string> pageUrl = p => Url.Action("Index", f.With(new { from = from, to = to, page = p }));
+}
+@if (Model.TotalCount > 0)
+{
+    var pageCount = Model.PageCount;
+    var firstShown = Math.Max(1, Model.Page - 2);
+    var lastShown = Math.Min(pageCount, firstShown + 4);
+    firstShown = Math.Max(1, lastShown - 4);
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
+        <div class="text-muted small">
+            عرض @Model.FirstRowNumber &ndash; @Model.LastRowNumber من أصل @Model.TotalCount رحلة
+            @if (Model.IsPaged)
+            {
+                <text>&nbsp;&bull;&nbsp; صفحة @Model.Page من @pageCount</text>
+            }
+        </div>
+        @if (Model.IsPaged)
+        {
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                        <a class="page-link" data-page="1" href="@pageUrl(1)">الأولى</a>
+                    </li>
+                    <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                        <a class="page-link" data-page="@(Model.Page - 1)" href="@pageUrl(Model.Page - 1)">&raquo;</a>
+                    </li>
+                    @for (var p = firstShown; p <= lastShown; p++)
+                    {
+                        <li class="page-item @(p == Model.Page ? "active" : "")">
+                            <a class="page-link" data-page="@p" href="@pageUrl(p)">@p</a>
+                        </li>
+                    }
+                    <li class="page-item @(Model.Page >= pageCount ? "disabled" : "")">
+                        <a class="page-link" data-page="@(Model.Page + 1)" href="@pageUrl(Model.Page + 1)">&laquo;</a>
+                    </li>
+                    <li class="page-item @(Model.Page >= pageCount ? "disabled" : "")">
+                        <a class="page-link" data-page="@pageCount" href="@pageUrl(pageCount)">الأخيرة</a>
+                    </li>
+                </ul>
+            </nav>
+        }
+    </div>
+}
