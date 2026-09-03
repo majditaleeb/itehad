@@ -1,0 +1,45 @@
+﻿@model itehad.Models.ViewModels.CustomerStatementViewModel
+@using itehad.Models
+@{
+    Layout = "~/Views/Shared/_PrintLayout.cshtml";
+
+    Func<itehad.Models.ViewModels.CustomerLedgerViewModel, string, IHtmlString> renderLedger = (ledger, title) =>
+    {
+        var sb = new System.Text.StringBuilder();
+        var currencySymbol = ledger.Currency == CurrencyType.ILS ? "₪" : "$";
+
+        sb.Append("<h3 class=\"h6 fw-bold mt-4\">" + title + "</h3>");
+        sb.Append("<table class=\"table table-bordered table-sm\">");
+        sb.Append("<thead><tr><th>التاريخ</th><th>البيان</th><th>مدين</th><th>دائن</th><th>الرصيد</th></tr></thead><tbody>");
+
+        sb.Append("<tr><td colspan=\"4\">رصيد افتتاحي</td><td>" + currencySymbol + ledger.OpeningBalance.ToString("N0") + "</td></tr>");
+
+        foreach (var e in ledger.Entries)
+        {
+            sb.Append("<tr>");
+            sb.Append("<td>" + e.Date.ToString("yyyy-MM-dd HH:mm") + "</td>");
+            sb.Append("<td>" + Html.Encode(e.Description) + "</td>");
+            sb.Append("<td>" + (e.Debit > 0 ? currencySymbol + e.Debit.ToString("N0") : "-") + "</td>");
+            sb.Append("<td>" + (e.Credit > 0 ? currencySymbol + e.Credit.ToString("N0") : "-") + "</td>");
+            sb.Append("<td>" + currencySymbol + e.RunningBalance.ToString("N0") + "</td>");
+            sb.Append("</tr>");
+        }
+
+        sb.Append("<tr><td colspan=\"4\"><strong>رصيد ختامي</strong></td><td><strong>" + currencySymbol + ledger.ClosingBalance.ToString("N0") + "</strong></td></tr>");
+        sb.Append("</tbody></table>");
+        return new HtmlString(sb.ToString());
+    };
+}
+
+<h2 class="h5 fw-bold mb-1">كشف حساب: @Model.Customer.Name</h2>
+@if (!string.IsNullOrEmpty(Model.Customer.Phone))
+{
+    <p class="text-muted">@Model.Customer.Phone</p>
+}
+
+<p class="fw-bold">
+    المستحق حاليًا: @("₪" + Model.CurrentOutstandingILS.ToString("N0")) / @("$" + Model.CurrentOutstandingUSD.ToString("N0"))
+</p>
+
+@renderLedger(Model.LedgerILS, "كشف الحساب بالشيقل (₪)")
+@renderLedger(Model.LedgerUSD, "كشف الحساب بالدولار ($)")

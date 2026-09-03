@@ -1,0 +1,191 @@
+﻿@model itehad.Models.ViewModels.ExpenseIndexViewModel
+@using itehad.Helpers
+@{
+    ViewBag.Title = "المصاريف";
+    var maxAmount = Model.Summary.Any() ? Model.Summary.Max(r => r.TotalAmount) : 0;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <form method="get" action="@Url.Action("Index")" class="d-flex flex-wrap align-items-end gap-2">
+        <div>
+            <label class="form-label">من تاريخ</label>
+            <input type="date" name="from" class="form-control" value="@Model.FromDate.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label">إلى تاريخ</label>
+            <input type="date" name="to" class="form-control" value="@Model.ToDate.ToString("yyyy-MM-dd")" />
+        </div>
+        <div>
+            <label class="form-label">التصنيف</label>
+            <select name="categoryId" class="form-select">
+                <option value="">كل التصنيفات</option>
+                @foreach (SelectListItem item in Model.CategoryOptions)
+                {
+                    if (Model.CategoryId.HasValue && item.Value == Model.CategoryId.Value.ToString())
+                    {
+                        <option value="@item.Value" selected="selected">@item.Text</option>
+                    }
+                    else
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                }
+            </select>
+        </div>
+        <button type="submit" class="btn btn-outline-secondary">عرض</button>
+    </form>
+    <a href="@Url.Action("Create")" class="btn btn-accent">@Icons.PlusCircle() تسجيل مصروف جديد</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="stat-card">
+            <div class="stat-icon red">@Icons.Money()</div>
+            <div>
+                <div class="stat-value">@("₪" + Model.TotalAmount.ToString("N0"))</div>
+                <div class="stat-label">إجمالي المصاريف ضمن الفترة</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Summary.Any())
+{
+    <div class="chart-card mb-4">
+        <div class="chart-title">@Icons.Tag() المصاريف حسب التصنيف</div>
+        <div class="bar-chart">
+            @foreach (var row in Model.Summary)
+            {
+                var pct = maxAmount > 0 ? (double)(row.TotalAmount / maxAmount) * 100 : 0;
+                <div class="bar-row">
+                    <div class="bar-label" title="@row.CategoryName">@row.CategoryName</div>
+                    <div class="bar-track" title="@(row.CategoryName): ₪@row.TotalAmount.ToString("N0")">
+                        <div class="bar-fill fuel" style="width:@(pct.ToString("0.##"))%"></div>
+                    </div>
+                    <div class="bar-value">@("₪" + row.TotalAmount.ToString("N0"))</div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<div class="table-card mb-4">
+    <div class="card-header bg-white px-3 py-3">إجمالي المصاريف حسب التصنيف</div>
+    @if (Model.Summary.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>التصنيف</th>
+                        <th>عدد الفواتير</th>
+                        <th>الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Summary)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@row.CategoryName</td>
+                            <td>@row.Count</td>
+                            <td>@("₪" + row.TotalAmount.ToString("N0"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.Tag()
+            <div>لا توجد مصاريف ضمن هذه الفترة</div>
+        </div>
+    }
+</div>
+
+<div class="table-card mb-4">
+    <div class="card-header bg-white px-3 py-3">المصاريف حسب السائق</div>
+    @if (Model.DriverSummary.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>السائق</th>
+                        <th>رقم السيارة</th>
+                        <th>سولار</th>
+                        <th>صيانة</th>
+                        <th>أخرى</th>
+                        <th>الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.DriverSummary)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@row.DriverName</td>
+                            <td>@row.CarNumber</td>
+                            <td>@(row.FuelTotal > 0 ? "₪" + row.FuelTotal.ToString("N0") : "-")</td>
+                            <td>@(row.MaintenanceTotal > 0 ? "₪" + row.MaintenanceTotal.ToString("N0") : "-")</td>
+                            <td>@(row.OtherTotal > 0 ? "₪" + row.OtherTotal.ToString("N0") : "-")</td>
+                            <td class="fw-bold">@("₪" + row.GrandTotal.ToString("N0"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.IdCard()
+            <div>لا توجد مصاريف مرتبطة بسائق ضمن هذه الفترة</div>
+        </div>
+    }
+</div>
+
+<div class="table-card">
+    <div class="card-header bg-white px-3 py-3">السجل التفصيلي</div>
+    @if (Model.Entries.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>التصنيف</th>
+                        <th>السائق / السيارة</th>
+                        <th>رقم الفاتورة</th>
+                        <th>المشتغل المرخص</th>
+                        <th>القيمة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var e in Model.Entries)
+                    {
+                        <tr>
+                            <td>@e.InvoiceDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td class="fw-semibold">@e.Category.Name</td>
+                            <td>@(e.Driver != null ? e.Driver.Name + " - " + e.Driver.CarNumber : "-")</td>
+                            <td>@e.InvoiceNumber</td>
+                            <td>@e.VendorName @(!string.IsNullOrEmpty(e.VendorLicenseNumber) ? "(" + e.VendorLicenseNumber + ")" : "")</td>
+                            <td>@("₪" + e.Amount.ToString("N0"))</td>
+                            <td class="text-start">
+                                <a href="@Url.Action("Edit", new { id = e.Id })" class="btn btn-sm btn-outline-secondary">@Icons.Edit()</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.List()
+            <div>لا يوجد سجل مصاريف ضمن هذه الفترة</div>
+        </div>
+    }
+</div>

@@ -1,0 +1,86 @@
+﻿@model itehad.Models.ViewModels.ExpenseFormViewModel
+@using itehad.Helpers
+@{
+    var categorySelect = new System.Text.StringBuilder();
+    categorySelect.Append("<select name=\"CategoryId\" id=\"CategoryId\" class=\"form-select\" data-toggle-driver-field>");
+    categorySelect.Append("<option value=\"\">-- اختر التصنيف --</option>");
+    foreach (SelectListItem item in Model.CategoryOptions)
+    {
+        var requiresDriver = itehad.Models.ViewModels.ExpenseFormViewModel.DriverRequiredCategoryNames.Contains(item.Text) ? "1" : "0";
+        var selectedAttr = Model.CategoryId.ToString() == item.Value ? " selected" : "";
+        categorySelect.Append("<option value=\"" + item.Value + "\" data-requires-driver=\"" + requiresDriver + "\"" + selectedAttr + ">" + Html.Encode(item.Text) + "</option>");
+    }
+    categorySelect.Append("</select>");
+}
+
+@Html.AntiForgeryToken()
+@Html.HiddenFor(m => m.Id)
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label class="form-label">التصنيف</label>
+        <div class="input-group">
+            @Html.Raw(categorySelect.ToString())
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quickAddCategoryModal">@Icons.PlusCircle() جديد</button>
+        </div>
+        @Html.ValidationMessageFor(m => m.CategoryId, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-6" data-driver-field-wrap style="display:none">
+        <label class="form-label">السائق / السيارة</label>
+        @Html.DropDownListFor(m => m.DriverId, Model.DriverOptions, "-- اختر السائق --", new { @class = "form-select" })
+        @Html.ValidationMessageFor(m => m.DriverId, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">تاريخ الفاتورة</label>
+        @Html.TextBoxFor(m => m.InvoiceDate, "{0:yyyy-MM-ddTHH:mm}", new { type = "datetime-local", @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.InvoiceDate, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">رقم الفاتورة</label>
+        @Html.TextBoxFor(m => m.InvoiceNumber, new { @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.InvoiceNumber, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">قيمة الفاتورة (₪)</label>
+        @Html.TextBoxFor(m => m.Amount, new { type = "number", step = "0.01", min = "0", @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.Amount, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">اسم المشتغل المرخص</label>
+        @Html.TextBoxFor(m => m.VendorName, new { @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.VendorName, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">رقم المشتغل المرخص</label>
+        @Html.TextBoxFor(m => m.VendorLicenseNumber, new { @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.VendorLicenseNumber, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-12">
+        <label class="form-label">ملاحظات</label>
+        @Html.TextAreaFor(m => m.Notes, new { @class = "form-control", rows = "2" })
+    </div>
+</div>
+
+<div class="d-flex gap-2 mt-4">
+    <button type="submit" class="btn btn-accent px-4">حفظ</button>
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">إلغاء</a>
+</div>
+
+<div class="modal fade" id="quickAddCategoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">إضافة تصنيف جديد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">اسم التصنيف</label>
+                <input type="text" class="form-control" id="quickCategoryName" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-accent" data-quick-add-category-submit>إضافة</button>
+            </div>
+        </div>
+    </div>
+</div>

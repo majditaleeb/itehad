@@ -1,0 +1,10 @@
+@model itehad.Models.ViewModels.TripListViewModel
+@*
+    الردّ على البحث الحيّ: القطع الثلاث اللي بتتغيّر، ملفوفة بعلامات عشان
+    الجافاسكربت يوزّعهن على أماكنهن. الصفحة نفسها بترسم نفس القطع مباشرة أول
+    مرة، فما في شي بينتظر الجافاسكربت عشان يبان. رأس الجدول وخانات البحث مش
+    هون عمداً — بتضل ثابتة عشان ما يضيع تركيز الكتابة.
+*@
+<div data-part="cards">@Html.Partial("_TripCards", Model)</div>
+<table hidden><tbody data-part="rows">@Html.Partial("_TripRows", Model)</tbody></table>
+<div data-part="pager">@Html.Partial("_TripPager", Model)</div>

@@ -1,0 +1,65 @@
+﻿@model IEnumerable<itehad.Models.Driver>
+@using itehad.Helpers
+@{
+    ViewBag.Title = "السائقون";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div></div>
+    <a href="@Url.Action("Create")" class="btn btn-accent">@Icons.PlusCircle() سائق جديد</a>
+</div>
+
+<div class="table-card">
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>رقم الهاتف</th>
+                        <th>رقم السيارة</th>
+                        <th>الحالة</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@d.Name</td>
+                            <td>@d.Phone</td>
+                            <td>@d.CarNumber</td>
+                            <td>
+                                @if (d.IsActive)
+                                {
+                                    <span class="pill pill-green">فعّال</span>
+                                }
+                                else
+                                {
+                                    <span class="pill pill-gray">معطّل</span>
+                                }
+                            </td>
+                            <td class="text-start d-flex gap-1 justify-content-end">
+                                @using (Html.BeginForm("ToggleActive", "Drivers", FormMethod.Post, new { style = "display:inline" }))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@d.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">@(d.IsActive ? "تعطيل" : "تفعيل")</button>
+                                }
+                                <a href="@Url.Action("Edit", new { id = d.Id })" class="btn btn-sm btn-outline-secondary">@Icons.Edit()</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.IdCard()
+            <div>لا يوجد سائقون مسجّلون بعد</div>
+        </div>
+    }
+</div>

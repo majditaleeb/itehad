@@ -1,0 +1,106 @@
+﻿@model IEnumerable<itehad.Models.ViewModels.DriverAttendanceStatusViewModel>
+@using itehad.Helpers
+@{
+    ViewBag.Title = "حضور وانصراف السائقين";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="text-muted">عدد السائقين العاملين الآن: <span class="fw-bold text-dark">@Model.Count(m => m.IsOnDuty)</span></div>
+    @if (User.IsInRole(Modules.HoursReport))
+    {
+        <a href="@Url.Action("Hours", "Reports")" class="btn btn-outline-secondary">@Icons.BarChart() تقرير الساعات</a>
+    }
+</div>
+
+<div class="table-card">
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>السائق</th>
+                        <th>رقم السيارة</th>
+                        <th>الحالة</th>
+                        <th>وقت الدخول</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@d.DriverName</td>
+                            <td>@d.CarNumber</td>
+                            <td>
+                                @if (d.IsOnDuty)
+                                {
+                                    <span class="pill pill-green">@Icons.Clock() يعمل الآن</span>
+                                }
+                                else
+                                {
+                                    <span class="pill pill-gray">خارج الدوام</span>
+                                }
+                            </td>
+                            <td>@(d.CheckInTime.HasValue ? d.CheckInTime.Value.ToString("yyyy-MM-dd HH:mm") : "-")</td>
+                            <td class="text-start">
+                                @if (d.IsOnDuty)
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-attendance-action="checkout" data-attendance-id="@d.OpenAttendanceId"
+                                            data-bs-toggle="modal" data-bs-target="#attendanceTimeModal">تسجيل خروج</button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn btn-sm btn-accent"
+                                            data-attendance-action="checkin" data-attendance-id="@d.DriverId"
+                                            data-bs-toggle="modal" data-bs-target="#attendanceTimeModal">تسجيل دخول</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.IdCard()
+            <div>لا يوجد سائقون فعّالون بعد</div>
+        </div>
+    }
+</div>
+
+<div class="modal fade" id="attendanceTimeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="attendanceTimeModalTitle">تسجيل الوقت</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label">الوقت</label>
+                <input type="time" class="form-control" id="attendanceTimeInput" />
+                <div class="text-muted small mt-2">التاريخ يُسجَّل تلقائيًا بتاريخ اليوم (@DateTime.Today.ToString("yyyy-MM-dd")) — فقط أدخل الوقت.</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-accent" id="attendanceTimeConfirm">تأكيد</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@using (Html.BeginForm("CheckIn", "Attendance", FormMethod.Post, new { id = "checkInForm", style = "display:none" }))
+{
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="driverId" id="checkInDriverId" />
+    <input type="hidden" name="time" id="checkInTime" />
+}
+@using (Html.BeginForm("CheckOut", "Attendance", FormMethod.Post, new { id = "checkOutForm", style = "display:none" }))
+{
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="attendanceId" id="checkOutAttendanceId" />
+    <input type="hidden" name="time" id="checkOutTime" />
+}

@@ -1,0 +1,57 @@
+﻿@model IEnumerable<itehad.Models.ViewModels.CustomerListItemViewModel>
+@using itehad.Helpers
+@{
+    ViewBag.Title = "الزبائن";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div></div>
+    <a href="@Url.Action("Create")" class="btn btn-accent">@Icons.PlusCircle() زبون جديد</a>
+</div>
+
+<div class="table-card">
+    @if (Model.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>الاسم</th>
+                        <th>رقم الهاتف</th>
+                        <th>ذمم بالشيقل</th>
+                        <th>ذمم بالدولار</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model)
+                    {
+                        <tr>
+                            <td class="fw-semibold">
+                                @c.Name
+                                @if (c.IsOverLimit)
+                                {
+                                    <span class="pill pill-red">@Icons.XCircle() تجاوز الحد</span>
+                                }
+                            </td>
+                            <td>@c.Phone</td>
+                            <td>@(c.OutstandingILS > 0 ? "₪" + c.OutstandingILS.ToString("N0") : "-")</td>
+                            <td>@(c.OutstandingUSD > 0 ? "$" + c.OutstandingUSD.ToString("N0") : "-")</td>
+                            <td class="text-start d-flex gap-1 justify-content-end">
+                                <a href="@Url.Action("Statement", new { id = c.Id })" class="btn btn-sm btn-outline-secondary">كشف الحساب</a>
+                                <a href="@Url.Action("Edit", new { id = c.Id })" class="btn btn-sm btn-outline-secondary">@Icons.Edit()</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            @Icons.Users()
+            <div>لا يوجد زبائن مسجّلون بعد</div>
+        </div>
+    }
+</div>

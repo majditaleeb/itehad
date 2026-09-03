@@ -1,0 +1,139 @@
+﻿@model itehad.Models.ViewModels.TripFormViewModel
+@using itehad.Helpers
+@using itehad.Models
+
+@Html.AntiForgeryToken()
+@Html.HiddenFor(m => m.Id)
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label class="form-label">التاريخ والوقت</label>
+        @Html.TextBoxFor(m => m.TripDate, "{0:yyyy-MM-ddTHH:mm}", new { type = "datetime-local", @class = "form-control", id = "TripDate" })
+        @Html.ValidationMessageFor(m => m.TripDate, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-6">
+        <label class="form-label">مصدر الحجز</label>
+        @Html.DropDownListFor(m => m.BookingSourceId, Model.BookingSourceOptions, "-- اختر مصدر الحجز --", new { @class = "form-select" })
+        @Html.ValidationMessageFor(m => m.BookingSourceId, "", new { @class = "text-danger small" })
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label">الزبون</label>
+        <div class="input-group">
+            @Html.DropDownListFor(m => m.CustomerId, Model.CustomerOptions, "-- اختر الزبون --", new { @class = "form-select js-searchable-select" })
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quickAddCustomerModal">@Icons.PlusCircle() جديد</button>
+        </div>
+        @Html.ValidationMessageFor(m => m.CustomerId, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">حالة الطلب</label>
+        @Html.EnumDropDownListFor(m => m.RequestType, new { @class = "form-select", id = "RequestType" })
+    </div>
+    <div class="col-md-3" data-days-count-wrap>
+        <label class="form-label">عدد الأيام</label>
+        @Html.TextBoxFor(m => m.DaysCount, new { type = "number", min = "1", @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.DaysCount, "", new { @class = "text-danger small" })
+    </div>
+
+    <div class="col-md-5">
+        <label class="form-label">من</label>
+        <div class="input-group">
+            @Html.DropDownListFor(m => m.FromLocationId, Model.LocationOptions, "-- اختر الموقع --", new { @class = "form-select js-searchable-select" })
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quickAddLocationModal" data-quick-add-location-open="FromLocationId">@Icons.PlusCircle()</button>
+        </div>
+        @Html.ValidationMessageFor(m => m.FromLocationId, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-2 d-flex align-items-center justify-content-center">
+        <span class="route-arrow mt-4">@Icons.ArrowSwap("icon icon-lg")</span>
+    </div>
+    <div class="col-md-5">
+        <label class="form-label">إلى</label>
+        <div class="input-group">
+            @Html.DropDownListFor(m => m.ToLocationId, Model.LocationOptions, "-- اختر الموقع --", new { @class = "form-select js-searchable-select" })
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#quickAddLocationModal" data-quick-add-location-open="ToLocationId">@Icons.PlusCircle()</button>
+        </div>
+        @Html.ValidationMessageFor(m => m.ToLocationId, "", new { @class = "text-danger small" })
+    </div>
+
+    <div class="col-12">
+        <label class="form-label">السائقون / السيارات</label>
+        @* بطاقات جنب بعض بدل قائمة طويلة نازلة، مع فلترة بتشتغل على الاسم ورقم
+           السيارة سوا — الهدف يلاقي السائق بضربة عين وهو عم يسجّل بسرعة. *@
+        <div class="driver-picker" data-driver-picker>
+            <div class="driver-toolbar">
+                <input type="search" class="form-control form-control-sm" autocomplete="off"
+                       placeholder="اكتب اسم السائق أو رقم السيارة…" data-driver-filter>
+                <span class="driver-count" data-driver-count></span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-driver-clear hidden>إلغاء التحديد</button>
+            </div>
+            <div class="driver-grid" data-driver-checklist>
+                @if (Model.DriverOptions != null && Model.DriverOptions.Any())
+                {
+                    foreach (var d in Model.DriverOptions)
+                    {
+                        var isChecked = Model.DriverIds != null && Model.DriverIds.Contains(int.Parse(d.Value));
+                        var text = d.Text ?? "";
+                        var cut = text.LastIndexOf(" - ", StringComparison.Ordinal);
+                        var name = cut > 0 ? text.Substring(0, cut) : text;
+                        var car = cut > 0 ? text.Substring(cut + 3) : "";
+                        <div class="driver-chip" data-driver-row data-search="@text">
+                            <input class="driver-chip-input" type="checkbox" name="DriverIds" value="@d.Value"
+                                   id="driver_@d.Value" data-driver-name="@name" @(isChecked ? "checked" : "") />
+                            <label class="driver-chip-face" for="driver_@d.Value">
+                                <span class="driver-tick" aria-hidden="true"></span>
+                                <span class="driver-text">
+                                    @* dir="auto" عشان الأسماء الإنجليزية ما تنعكس علامات ترقيمها *@
+                                    <span class="driver-name" dir="auto">@name</span>
+                                    @if (car.Length > 0)
+                                    {
+                                        <span class="driver-car">@car</span>
+                                    }
+                                </span>
+                            </label>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-muted small p-2">لا يوجد سائقون فعّالون - أضف سائقًا من شاشة السائقين أولًا</div>
+                }
+            </div>
+            <div class="driver-none" data-driver-empty hidden>ما في سائق بهذا الاسم</div>
+        </div>
+        @Html.ValidationMessageFor(m => m.DriverIds, "", new { @class = "text-danger small" })
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label">الأجرة</label>
+        @Html.TextBoxFor(m => m.Fare, new { type = "number", step = "0.01", min = "0", @class = "form-control" })
+        @Html.ValidationMessageFor(m => m.Fare, "", new { @class = "text-danger small" })
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">العملة</label>
+        @Html.EnumDropDownListFor(m => m.Currency, new { @class = "form-select" })
+    </div>
+    <div class="col-md-4">
+        <label class="form-label">طريقة الدفع</label>
+        @Html.EnumDropDownListFor(m => m.PaymentMethod, new { @class = "form-select" })
+    </div>
+
+    <div class="col-12">
+        <label class="form-label">ملاحظات</label>
+        @Html.TextAreaFor(m => m.Notes, new { @class = "form-control", rows = "2" })
+    </div>
+</div>
+
+<div class="d-flex gap-2 mt-4 flex-wrap">
+    @if (Model.Id == 0)
+    {
+        <button type="button" class="btn btn-outline-secondary px-4" data-batch-add>@Icons.PlusCircle() إضافة إلى القائمة</button>
+    }
+    <button type="submit" class="btn btn-accent px-4">@Icons.CheckCircle() حفظ الرحلة</button>
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">إلغاء</a>
+</div>
+@if (Model.Id == 0)
+{
+    <div class="text-danger small mt-2" data-batch-error style="display:none"></div>
+}
+
+@Html.Partial("_QuickAddModals")

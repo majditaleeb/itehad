@@ -4,3 +4,10 @@ App_Data/
 *.suo
 Thumbs.db
 desktop.ini
+
+# ---- src/ = الكود المصدري (مشروع Visual Studio) ----
+# مخرجات البناء وحزم NuGet ما بترتفع — بترجع لحالها بـ nuget restore + إعادة بناء
+src/packages/
+src/**/bin/
+src/**/obj/
+src/.vs/

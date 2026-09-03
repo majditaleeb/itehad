@@ -1,0 +1,256 @@
+@model itehad.Models.ViewModels.TripListViewModel
+@using itehad.Helpers
+@using itehad.Models.ViewModels
+@{
+    ViewBag.Title = "سجل الحركة اليومية";
+    var from = Model.FromDate.ToString("yyyy-MM-dd");
+    var to = Model.ToDate.ToString("yyyy-MM-dd");
+    var span = Model.DaysSpan;
+    var prevFrom = Model.FromDate.AddDays(-span).ToString("yyyy-MM-dd");
+    var prevTo = Model.ToDate.AddDays(-span).ToString("yyyy-MM-dd");
+    var nextFrom = Model.FromDate.AddDays(span).ToString("yyyy-MM-dd");
+    var nextTo = Model.ToDate.AddDays(span).ToString("yyyy-MM-dd");
+
+    var today = DateTime.Today;
+    var monthStart = new DateTime(today.Year, today.Month, 1);
+    var lastMonthStart = monthStart.AddMonths(-1);
+    var f = "yyyy-MM-dd";
+
+    Func<string, string, bool> isOn = (a, b) => from == a && to == b;
+    Func<string, string, string> preset = (a, b) =>
+        "btn btn-sm " + (isOn(a, b) ? "btn-accent" : "btn-outline-secondary");
+
+    var filter = Model.Filter ?? new TripFilter();
+}
+
+<div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div class="d-flex flex-column gap-2">
+        <form method="get" action="@Url.Action("Index")" id="periodForm" class="d-flex align-items-center gap-2 flex-wrap">
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", filter.With(new { from = prevFrom, to = prevTo }))" title="الفترة السابقة">&raquo;</a>
+            <span class="text-muted small">من</span>
+            <input type="date" name="from" class="form-control form-control-sm" style="width:9.5rem" value="@from" />
+            <span class="text-muted small">إلى</span>
+            <input type="date" name="to" class="form-control form-control-sm" style="width:9.5rem" value="@to" />
+            <button type="submit" class="btn btn-accent btn-sm">بحث</button>
+            <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Index", filter.With(new { from = nextFrom, to = nextTo }))" title="الفترة التالية">&laquo;</a>
+            @* تغيير الفترة بيحافظ على بحث الأعمدة اللي شغّال. *@
+            @foreach (var kv in filter.RouteValues())
+            {
+                <input type="hidden" name="@kv.Key" value="@kv.Value" data-keep-filter />
+            }
+        </form>
+        <div class="d-flex align-items-center gap-1 flex-wrap">
+            <a class="@preset(today.ToString(f), today.ToString(f))" href="@Url.Action("Index", new { from = today.ToString(f), to = today.ToString(f) })">اليوم</a>
+            <a class="@preset(today.AddDays(-1).ToString(f), today.AddDays(-1).ToString(f))" href="@Url.Action("Index", new { from = today.AddDays(-1).ToString(f), to = today.AddDays(-1).ToString(f) })">أمس</a>
+            <a class="@preset(today.AddDays(-6).ToString(f), today.ToString(f))" href="@Url.Action("Index", new { from = today.AddDays(-6).ToString(f), to = today.ToString(f) })">آخر ٧ أيام</a>
+            <a class="@preset(today.AddDays(-29).ToString(f), today.ToString(f))" href="@Url.Action("Index", new { from = today.AddDays(-29).ToString(f), to = today.ToString(f) })">آخر ٣٠ يوم</a>
+            <a class="@preset(monthStart.ToString(f), today.ToString(f))" href="@Url.Action("Index", new { from = monthStart.ToString(f), to = today.ToString(f) })">هذا الشهر</a>
+            <a class="@preset(lastMonthStart.ToString(f), monthStart.AddDays(-1).ToString(f))" href="@Url.Action("Index", new { from = lastMonthStart.ToString(f), to = monthStart.AddDays(-1).ToString(f) })">الشهر الماضي</a>
+            @if (Model.IsRange)
+            {
+                <span class="badge bg-secondary ms-1">@Model.DaysSpan يوم &bull; <span data-result-count>@Model.TotalCount</span> رحلة</span>
+            }
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="@Url.Action("Print", filter.With(new { from = from, to = to }))" target="_blank" class="btn btn-outline-secondary" data-export="@Url.Action("Print")">طباعة / PDF</a>
+        <a href="@Url.Action("ExportTrips", "Excel", filter.With(new { from = from, to = to }))" class="btn btn-outline-secondary" data-export="@Url.Action("ExportTrips", "Excel")">تصدير Excel</a>
+        <a href="@Url.Action("Create")" class="btn btn-accent">@Icons.PlusCircle() تسجيل رحلة جديدة</a>
+    </div>
+</div>
+
+<div id="tripsCards">@Html.Partial("_TripCards", Model)</div>
+
+<div class="table-card" data-trips-pane>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>الرقم</th>
+                    @if (Model.IsRange)
+                    {
+                        <th>التاريخ</th>
+                    }
+                    <th>الوقت</th>
+                    <th>المصدر</th>
+                    <th>الزبون</th>
+                    <th>من - إلى</th>
+                    <th>السائقون</th>
+                    <th>الأجرة</th>
+                    <th>الدفع</th>
+                    <th>ملاحظات</th>
+                    <th></th>
+                </tr>
+                @* بحث حيّ فوق كل عمود: بيشتغل على الفترة كلها مش بس الصفحة
+                   المعروضة، وكل الخانات بتتجمّع مع بعض (هاي و هاي). *@
+                <tr class="col-filters">
+                    <th><input type="search" data-col="num" value="@filter.Num" placeholder="رقم" style="width:5rem" /></th>
+                    @if (Model.IsRange)
+                    {
+                        <th><input type="search" data-col="day" value="@filter.Day" placeholder="سنة-شهر-يوم" title="سنة (2026) أو سنة-شهر (2026-09) أو تاريخ كامل" style="width:8rem" /></th>
+                    }
+                    <th><input type="search" data-col="time" value="@filter.Time" placeholder="ساعة" title="الساعة (10) أو الساعة والدقيقة (10:26)" style="width:5rem" /></th>
+                    <th><input type="search" data-col="src" value="@filter.Src" placeholder="المصدر" /></th>
+                    <th><input type="search" data-col="cust" value="@filter.Cust" placeholder="الزبون" /></th>
+                    <th><input type="search" data-col="route" value="@filter.Route" placeholder="من أو إلى" /></th>
+                    <th><input type="search" data-col="drv" value="@filter.Drv" placeholder="السائق" /></th>
+                    <th><input type="search" data-col="fare" value="@filter.Fare" placeholder="مبلغ" title="المبلغ بالضبط" style="width:5.5rem" /></th>
+                    <th>
+                        <select data-col="pay">
+                            <option value="">الكل</option>
+                            <option value="0" @(filter.Pay == "0" ? "selected" : "")>نقدي</option>
+                            <option value="1" @(filter.Pay == "1" ? "selected" : "")>ذمم</option>
+                        </select>
+                    </th>
+                    <th><input type="search" data-col="note" value="@filter.Note" placeholder="ملاحظات" /></th>
+                    <th class="text-start">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-clear-filters
+                                title="مسح كل خانات البحث" @(filter.IsEmpty ? "hidden" : "")>مسح</button>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="tripRows">@Html.Partial("_TripRows", Model)</tbody>
+        </table>
+    </div>
+</div>
+
+<div id="tripsPager">@Html.Partial("_TripPager", Model)</div>
+
+<div class="modal fade" id="breakdownModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+<script>
+(function ($) {
+    "use strict";
+
+    var LIST_URL = "@Url.Action("List")";
+    var INDEX_URL = "@Url.Action("Index")";
+    var PERIOD = { from: "@from", to: "@to" };
+    var page = @Model.Page;
+    var timer = null, seq = 0;
+
+    var $cards = $("#tripsCards"), $rows = $("#tripRows"), $pager = $("#tripsPager");
+    var $pane = $("[data-trips-pane]");
+
+    function filters() {
+        var f = {};
+        $(".col-filters [data-col]").each(function () {
+            var v = $.trim(String($(this).val() || ""));
+            if (v) { f[$(this).data("col")] = v; }
+        });
+        return f;
+    }
+
+    function apply(html) {
+        var $frag = $("<div>").html(html);
+        $cards.html($frag.find("[data-part=cards]").html());
+        $rows.html($frag.find("[data-part=rows]").html());
+        $pager.html($frag.find("[data-part=pager]").html());
+        $("[data-result-count]").text($cards.find("[data-total]").attr("data-total"));
+    }
+
+    // الطباعة والتصدير وتغيير الفترة والعنوان بالمتصفح لازم كلهن يحملوا نفس
+    // البحث، وإلا التصدير بيطلع غير اللي على الشاشة أو الرجوع بيضيّع الفلترة.
+    function syncLinks(f) {
+        var q = $.param($.extend({ from: PERIOD.from, to: PERIOD.to }, f));
+
+        $("[data-export]").each(function () {
+            $(this).attr("href", $(this).data("export") + "?" + q);
+        });
+
+        var $form = $("#periodForm");
+        $form.find("[data-keep-filter]").remove();
+        $.each(f, function (k, v) {
+            $("<input type='hidden' data-keep-filter>").attr("name", k).val(v).appendTo($form);
+        });
+
+        if (window.history && history.replaceState) {
+            history.replaceState(null, "", INDEX_URL + "?" + q + (page > 1 ? "&page=" + page : ""));
+        }
+    }
+
+    function load() {
+        var f = filters();
+        var mine = ++seq;
+        $pane.addClass("is-loading");
+
+        $.get(LIST_URL, $.extend({ from: PERIOD.from, to: PERIOD.to, page: page }, f))
+            .done(function (html) {
+                if (mine !== seq) { return; }      // ردّ قديم وصل متأخر — بنتجاهله
+                apply(html);
+                syncLinks(f);
+                $("[data-clear-filters]").prop("hidden", $.isEmptyObject(f));
+            })
+            .fail(function () {
+                if (mine !== seq) { return; }
+                $rows.html('<tr class="no-hover"><td colspan="20" class="p-4 text-center text-danger">' +
+                           'تعذّر تحميل النتائج، حاول مرة ثانية.</td></tr>');
+            })
+            .always(function () { if (mine === seq) { $pane.removeClass("is-loading"); } });
+    }
+
+    // كتابة = بحث بعد وقفة قصيرة؛ اختيار من قائمة الدفع = فورًا.
+    $(document).on("input", ".col-filters input[data-col]", function () {
+        page = 1;
+        clearTimeout(timer);
+        timer = setTimeout(load, 300);
+    });
+    $(document).on("change", ".col-filters select[data-col]", function () {
+        page = 1;
+        clearTimeout(timer);
+        load();
+    });
+    $(document).on("keydown", ".col-filters input[data-col]", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); page = 1; clearTimeout(timer); load(); }
+        else if (e.key === "Escape" && $(this).val()) { $(this).val("").trigger("input"); }
+    });
+
+    $(document).on("click", "[data-clear-filters]", function () {
+        $(".col-filters [data-col]").val("");
+        page = 1;
+        clearTimeout(timer);
+        load();
+    });
+
+    // الصفحات بتتنقل بنفس الطريقة عشان ما يضيع البحث ولا خانات الكتابة.
+    $(document).on("click", "#tripsPager a[data-page]", function (e) {
+        if (e.ctrlKey || e.metaKey || e.shiftKey || $(this).closest(".page-item").hasClass("disabled")) { return; }
+        e.preventDefault();
+        page = parseInt($(this).data("page"), 10) || 1;
+        load();
+        $("html, body").animate({ scrollTop: 0 }, 200);
+    });
+
+    $(document).on("click", "[data-breakdown]", function () {
+        var $card = $(this);
+        var $modal = $("#breakdownModal");
+
+        $modal.find(".modal-title").text($card.data("breakdown-title"));
+        $modal.find(".modal-body").html(
+            '<div class="text-center text-muted py-5">جاري التحميل…</div>');
+
+        bootstrap.Modal.getOrCreateInstance($modal[0]).show();
+
+        $.get($card.data("breakdown"))
+            .done(function (html) { $modal.find(".modal-body").html(html); })
+            .fail(function () {
+                $modal.find(".modal-body").html(
+                    '<div class="alert alert-danger mb-0">تعذّر تحميل التفاصيل، حاول مرة ثانية.</div>');
+            });
+    });
+})(jQuery);
+</script>
+}
